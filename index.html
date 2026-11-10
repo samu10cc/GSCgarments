@@ -466,8 +466,8 @@ function renderCart(){
       <img src="${CONFIG.product.images.front}" alt="">
       <div>
         <strong>${CONFIG.product.name}</strong>
-        <small>Size ${x.size} · ${money(CONFIG.product.price)}</small>
-        <button class="remove" data-remove="${i}">Remove</button>
+        <small>Talla ${x.size} · ${money(CONFIG.product.price)}</small>
+        <button class="remove" data-remove="${i}">Eliminar</button>
       </div>
       <div class="qty">
         <button data-minus="${i}">−</button><span>${x.qty}</span><button data-plus="${i}">+</button>
@@ -559,6 +559,237 @@ document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){closeCart();$("#checkoutModal").classList.remove("open");$("#searchModal").classList.remove("open")}
 });
 renderCart();
+</script>
+
+<!-- MEJORAS GSC GARMENTS -->
+
+gsc-mejoras.txt
+100 %
+<!-- ============================================================
+  GSC GARMENTS · BLOQUE DE MEJORAS
+  Pega TODO este bloque justo antes de </body>, DESPUÉS de tu bloque de JavaScript actual.
+  No toca tus imágenes ni tu código: se apoya en CONFIG, cart, addToCart, etc.
+  Lo editable está en el objeto GX (arriba del script).
+============================================================ -->
+<style>
+.gx-progress{position:fixed;top:0;left:0;height:2px;width:0;background:var(--text);z-index:90}
+.gx-trust{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+.gx-trust a{padding:24px 22px;border-right:1px solid var(--line);display:grid;gap:4px}
+.gx-trust a:last-child{border-right:0}
+.gx-trust b{font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+.gx-trust span{font-size:12px;color:var(--muted)}
+.gx-gal{display:grid;gap:10px}
+.gx-badge{position:absolute;top:14px;left:14px;background:var(--text);color:#090909;font-size:10px;letter-spacing:.16em;font-weight:700;padding:7px 10px}
+.gx-thumbs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:10px}
+.gx-thumbs button{aspect-ratio:1;border:1px solid var(--line);background:#151516;padding:0;overflow:hidden;opacity:.55;transition:.2s}
+.gx-thumbs button.on,.gx-thumbs button:hover{opacity:1;border-color:var(--text)}
+.gx-thumbs img{width:100%;height:100%;object-fit:cover}
+.gx-tools{display:flex;gap:20px;margin-top:12px}
+.gx-link{background:none;border:0;border-bottom:1px solid transparent;color:var(--muted);font-size:11px;letter-spacing:.16em;font-weight:700;text-transform:uppercase;padding:6px 0;transition:.2s}
+.gx-link:hover,.gx-link[aria-pressed=true]{color:var(--text);border-color:var(--text)}
+.gx-acc{margin-top:34px}
+.gx-lb{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.95);display:none;place-items:center;overflow:hidden}
+.gx-lb.open{display:grid}
+.gx-lb img{max-width:92vw;max-height:86vh;object-fit:contain;cursor:zoom-in;transition:transform .25s}
+.gx-lb img.zoom{transform:scale(2);cursor:zoom-out}
+.gx-lb button{position:absolute;background:none;border:0;color:#fff;font-size:38px;width:56px;height:56px}
+.gx-lb .x{top:10px;right:10px}.gx-lb .p{left:6px;top:50%}.gx-lb .n{right:6px;top:50%}
+.gx-lb .c{position:absolute;bottom:18px;font-size:11px;letter-spacing:.2em;color:var(--muted)}
+.gx-drop .gx-count{display:flex;flex-wrap:wrap;gap:clamp(16px,4vw,60px);margin:34px 0}
+.gx-count div{display:grid}
+.gx-count b{font:italic 800 clamp(64px,13vw,170px)/.85 "Barlow Condensed",sans-serif;font-variant-numeric:tabular-nums}
+.gx-count span{font-size:10px;letter-spacing:.24em;color:var(--muted);text-transform:uppercase;margin-top:8px}
+.gx-ship{padding:14px 0;border-bottom:1px solid var(--line);font-size:12px}
+.gx-ship i{display:block;height:3px;background:var(--line);margin-top:9px}
+.gx-ship u{display:block;height:100%;background:var(--text);transition:width .4s}
+.cart-bottom .total-row{display:none}
+#gxTot div{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);padding:3px 0}
+#gxTot .t{font-size:17px;font-weight:600;color:var(--text);margin:8px 0 12px}
+.gx-code{display:flex;border:1px solid var(--line);margin-bottom:12px}
+.gx-code input{flex:1;background:none;border:0;padding:12px;outline:0;font-size:12px;text-transform:uppercase}
+.gx-code button{background:none;border:0;padding:0 14px;font-size:11px;font-weight:700;letter-spacing:.14em}
+.gx-sticky{position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;align-items:center;justify-content:space-between;gap:14px;padding:12px 16px;background:rgba(9,9,9,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line)}
+.gx-sticky strong{display:block;font-size:11px;letter-spacing:.12em}
+.gx-sticky span{font-size:13px;color:var(--muted)}
+.gx-cookie{position:fixed;left:16px;bottom:16px;z-index:95;max-width:380px;background:var(--panel2);border:1px solid var(--line);padding:18px}
+.gx-cookie p{font-size:12px;color:var(--muted);margin-bottom:14px}
+.gx-cookie div{display:flex;gap:8px;flex-wrap:wrap}
+.gx-top{position:fixed;right:16px;bottom:16px;z-index:55;width:44px;height:44px;border:1px solid var(--line);background:var(--panel);font-size:18px;opacity:0;pointer-events:none;transition:.25s}
+.gx-top.show{opacity:1;pointer-events:auto}
+.gx-sg table{width:100%;border-collapse:collapse;margin-top:18px;font-size:13px}
+.gx-sg th,.gx-sg td{padding:11px 8px;border-bottom:1px solid var(--line);text-align:left}
+.gx-sg th{font-size:10px;letter-spacing:.16em;color:var(--muted)}
+.gx-rec{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:22px}
+.gx-rec input{background:#0d0d0e;border:1px solid var(--line);padding:12px;outline:0}
+#gxRes{margin-top:14px;font-size:13px;min-height:20px}
+@media(max-width:900px){
+  .gx-trust{grid-template-columns:1fr 1fr}
+  .gx-trust a:nth-child(2n){border-right:0}
+  .gx-trust a:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .gx-sticky{display:flex}.cart-open .gx-sticky{display:none}
+  .gx-top{bottom:78px}
+}
+@media(prefers-reduced-motion:reduce){.track{animation:none}*{transition:none!important}}
+</style>
+
+<script>
+(()=>{
+if(typeof CONFIG==="undefined")return;
+
+/* ===== EDITA AQUÍ (ajusta a tu realidad antes de vender) ===== */
+const GX={
+  freeShipFrom:50,            // envío gratis a partir de (€)
+  shipping:4.99,              // coste de envío (€)
+  codes:{GSC10:10},           // códigos de descuento {CODIGO:%}. Pon {} para desactivar
+  nextDrop:"2026-12-12T18:00:00", // fecha del próximo lanzamiento. "" para ocultar
+  email:"gscgarments@gmail.com",
+  instagram:"https://www.instagram.com/gscgarments/",
+  sizes:[["S",58,72],["M",60,74],["L",62,76],["XL",64,78],["XXL",66,80]] // talla, ancho, largo (cm) · SUSTITUYE por tus medidas reales
+};
+
+const q=(s,r=document)=>r.querySelector(s),qa=(s,r=document)=>[...r.querySelectorAll(s)];
+const store={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const B=document.body;
+
+/* --- Barra de progreso, volver arriba, menú activo --- */
+B.insertAdjacentHTML("beforeend",`<div class="gx-progress" id="gxBar"></div><button class="gx-top" id="gxTop" aria-label="Volver arriba">↑</button>`);
+const bar=q("#gxBar"),toTop=q("#gxTop");
+addEventListener("scroll",()=>{const h=document.documentElement;bar.style.width=(scrollY/Math.max(1,h.scrollHeight-innerHeight)*100)+"%";toTop.classList.toggle("show",scrollY>900)},{passive:true});
+toTop.onclick=()=>scrollTo({top:0,behavior:"smooth"});
+q(".nav").insertAdjacentHTML("beforeend",`<a href="#contact">CONTACTO</a>`);
+const links=qa(".nav a");
+const spy=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)links.forEach(a=>a.classList.toggle("active",a.getAttribute("href")==="#"+e.target.id))}),{rootMargin:"-45% 0px -50% 0px"});
+["drop","story","faq","contact"].forEach(id=>{const s=q("#"+id);if(s)spy.observe(s)});
+
+/* --- Franja de confianza --- */
+q(".marquee").insertAdjacentHTML("afterend",`<div class="gx-trust">
+<a href="#faq"><b>Envío gratis</b><span>desde ${money(GX.freeShipFrom)}</span></a>
+<a href="#drop"><b>Edición limitada</b><span>Colecciones cortas</span></a>
+<a href="#story"><b>Diseñado en Valencia</b><span>Marca independiente</span></a>
+<a href="#faq"><b>Devoluciones</b><span>Consulta las condiciones</span></a></div>`);
+
+/* --- Galería de producto con miniaturas y zoom --- */
+const im=CONFIG.product.images,shots=[["front","Delante"],["back","Espalda"],["details","Detalle"]].filter(s=>im[s[0]]);
+const pi=q(".product-image");
+let cur=0,main,lb;
+if(pi&&shots.length){
+  const wrap=document.createElement("div");wrap.className="gx-gal";pi.replaceWith(wrap);wrap.append(pi);
+  pi.innerHTML=`<img id="gxMain" src="${im[shots[0][0]]}" alt="Camiseta GSC Core" style="cursor:zoom-in"><span class="gx-badge">EDICIÓN LIMITADA</span>`;
+  wrap.insertAdjacentHTML("beforeend",`<div class="gx-thumbs">${shots.map((s,i)=>`<button class="${i?"":"on"}" data-i="${i}" aria-label="${s[1]}"><img src="${im[s[0]]}" alt=""></button>`).join("")}</div>`);
+  B.insertAdjacentHTML("beforeend",`<div class="gx-lb" id="gxLb" role="dialog" aria-modal="true" aria-label="Galería"><button class="x" aria-label="Cerrar">×</button><button class="p" data-d="-1" aria-label="Anterior">‹</button><img alt=""><button class="n" data-d="1" aria-label="Siguiente">›</button><span class="c"></span></div>`);
+  main=q("#gxMain");lb=q("#gxLb");const lbi=q("img",lb);
+  const show=i=>{cur=(i+shots.length)%shots.length;main.src=lbi.src=im[shots[cur][0]];q(".c",lb).textContent=shots[cur][1].toUpperCase()+" · "+(cur+1)+"/"+shots.length;qa(".gx-thumbs button").forEach((b,j)=>b.classList.toggle("on",j===cur))};
+  qa(".gx-thumbs button").forEach(b=>b.onclick=()=>show(+b.dataset.i));
+  main.onclick=()=>{show(cur);lb.classList.add("open")};
+  lb.onclick=e=>{const b=e.target.closest("button");if(b&&b.dataset.d)show(cur+ +b.dataset.d);else if(b||e.target===lb)closeLb()};
+  lbi.onclick=e=>{e.stopPropagation();lbi.classList.toggle("zoom")};
+  lbi.onmousemove=e=>{if(lbi.classList.contains("zoom")){const r=lbi.getBoundingClientRect();lbi.style.transformOrigin=((e.clientX-r.left)/r.width*100)+"% "+((e.clientY-r.top)/r.height*100)+"%"}};
+  var closeLb=()=>{lb.classList.remove("open");lbi.classList.remove("zoom")};
+  addEventListener("keydown",e=>{if(!lb.classList.contains("open"))return;if(e.key==="Escape")closeLb();if(e.key==="ArrowRight")show(cur+1);if(e.key==="ArrowLeft")show(cur-1)});
+}
+
+/* --- Guardar, compartir y detalles --- */
+q(".price").insertAdjacentHTML("afterend",`<div class="gx-tools"><button class="gx-link" id="gxHeart" aria-pressed="false">♡ Guardar</button><button class="gx-link" id="gxShare">Compartir</button></div>`);
+const heart=q("#gxHeart"),paintHeart=()=>{const on=store.get("gsc_wish",false);heart.setAttribute("aria-pressed",on);heart.textContent=(on?"♥ Guardado":"♡ Guardar")};
+paintHeart();
+heart.onclick=()=>{const on=!store.get("gsc_wish",false);store.set("gsc_wish",on);paintHeart();toast(on?"GUARDADO EN FAVORITOS":"ELIMINADO DE FAVORITOS")};
+q("#gxShare").onclick=()=>{
+  if(navigator.share)navigator.share({title:document.title,url:location.href}).catch(()=>{});
+  else if(navigator.clipboard)navigator.clipboard.writeText(location.href).then(()=>toast("ENLACE COPIADO")).catch(()=>{});
+};
+q(".features").insertAdjacentHTML("afterend",`<div class="gx-acc">
+<details><summary>DETALLES</summary><p>Camiseta negra extragrande de tejido grueso. Logotipo GSC en el pecho y gráfico completo del Lanzamiento 01 en la espalda.</p></details>
+<details><summary>CUIDADO DE LA PRENDA</summary><p>Lávala del revés a 30 °C, sin lejía, y plánchala también del revés para proteger el estampado.</p></details>
+<details><summary>ENVÍOS Y DEVOLUCIONES</summary><p>Envío gratis desde ${money(GX.freeShipFrom)}; por debajo, ${money(GX.shipping)}. Consulta las condiciones completas en la sección <a href="#faq" style="text-decoration:underline">Información</a>.</p></details></div>`);
+
+/* --- Guía de tallas + recomendador --- */
+const eb=qa(".product-info > .eyebrow")[1];
+if(eb){eb.style.cssText="display:flex;justify-content:space-between;align-items:center";eb.insertAdjacentHTML("beforeend",`<button class="gx-link" id="gxSgBtn">Guía de tallas</button>`)}
+B.insertAdjacentHTML("beforeend",`<div class="modal" id="gxSg"><div class="modal-box gx-sg"><button id="gxSgX" aria-label="Cerrar" style="float:right;background:none;border:0;font-size:24px">×</button>
+<p class="eyebrow">GSC / TALLAS</p><h3 class="display">GUÍA DE TALLAS</h3>
+<p>Corte extragrande. Medidas orientativas de la prenda en cm.</p>
+<table><tr><th>TALLA</th><th>ANCHO</th><th>LARGO</th></tr>${GX.sizes.map(s=>`<tr><td>${s[0]}</td><td>${s[1]}</td><td>${s[2]}</td></tr>`).join("")}</table>
+<form class="gx-rec" id="gxRec"><input id="gxH" type="number" min="140" max="220" placeholder="Altura (cm)" aria-label="Altura en cm" required><input id="gxW" type="number" min="35" max="200" placeholder="Peso (kg)" aria-label="Peso en kg" required><button class="btn small" type="submit">VER TALLA</button></form>
+<div id="gxRes" aria-live="polite"></div></div></div>`);
+const sg=q("#gxSg"),sgClose=()=>sg.classList.remove("open");
+if(q("#gxSgBtn"))q("#gxSgBtn").onclick=()=>sg.classList.add("open");
+q("#gxSgX").onclick=sgClose;sg.onclick=e=>{if(e.target===sg)sgClose()};
+addEventListener("keydown",e=>{if(e.key==="Escape")sgClose()});
+q("#gxRec").onsubmit=e=>{
+  e.preventDefault();const h=+q("#gxH").value,w=+q("#gxW").value;
+  let i=h<165?0:h<175?1:h<183?2:h<190?3:4;if(w>85)i++;if(w<55)i--;i=Math.max(0,Math.min(GX.sizes.length-1,i));
+  const t=GX.sizes[i][0];
+  q("#gxRes").innerHTML=`Talla recomendada: <strong>${t}</strong>. Es un corte extragrande: si prefieres un ajuste más ceñido, baja una talla. <button class="gx-link" id="gxPick">Elegir ${t}</button>`;
+  q("#gxPick").onclick=()=>{const b=q('.size[data-size="'+t+'"]');if(b)b.click();sgClose();toast("TALLA "+t+" SELECCIONADA")};
+};
+
+/* --- Cuenta atrás del próximo lanzamiento --- */
+if(GX.nextDrop&&q("#lookbook")){
+  q("#lookbook").insertAdjacentHTML("afterend",`<section class="section gx-drop" id="next"><div class="container"><p class="eyebrow">Próximo lanzamiento</p><h2>LANZAMIENTO 02</h2>
+  <div class="gx-count" id="gxCount" role="timer" aria-label="Cuenta atrás"><div><b>00</b><span>Días</span></div><div><b>00</b><span>Horas</span></div><div><b>00</b><span>Min</span></div><div><b>00</b><span>Seg</span></div></div>
+  <a class="btn" href="#community">AVÍSAME DEL LANZAMIENTO</a></div></section>`);
+  const tick=()=>{const d=Math.max(0,(new Date(GX.nextDrop)-Date.now())/1000);const v=[d/86400,d%86400/3600,d%3600/60,d%60];qa("#gxCount b").forEach((b,i)=>b.textContent=String(Math.floor(v[i])).padStart(2,"0"))};
+  tick();setInterval(tick,1000);
+}
+
+/* --- Carrito: envío, descuento y barra de envío gratis --- */
+const st={pct:0,code:""};
+const sub=()=>total(),disc=()=>sub()*st.pct/100,ship=()=>cart.length&&sub()-disc()<GX.freeShipFrom?GX.shipping:0,grand=()=>sub()-disc()+ship();
+q(".cart-bottom").insertAdjacentHTML("afterbegin",`<div id="gxTot"></div>${Object.keys(GX.codes).length?`<form class="gx-code" id="gxCode"><input placeholder="Código de descuento" aria-label="Código de descuento"><button type="submit">APLICAR</button></form>`:""}`);
+q("#cartLines").insertAdjacentHTML("beforebegin",`<div class="gx-ship" id="gxShip"></div>`);
+const paint=()=>{
+  const net=sub()-disc(),left=Math.max(0,GX.freeShipFrom-net);
+  q("#gxShip").style.display=cart.length?"block":"none";
+  q("#gxShip").innerHTML=`<p>${left>0?`Te faltan <b>${money(left)}</b> para el envío gratis`:"Tienes <b>envío gratis</b>"}</p><i><u style="width:${Math.min(100,net/GX.freeShipFrom*100)}%"></u></i>`;
+  q("#gxTot").innerHTML=`<div><span>Subtotal</span><span>${money(sub())}</span></div>${st.pct?`<div><span>Descuento ${st.code} (−${st.pct}%)</span><span>−${money(disc())}</span></div>`:""}<div><span>Envío</span><span>${cart.length?(ship()?money(ship()):"Gratis"):"—"}</span></div><div class="t"><span>TOTAL</span><span>${money(cart.length?grand():0)}</span></div>`;
+};
+if(q("#gxCode"))q("#gxCode").onsubmit=e=>{
+  e.preventDefault();const c=e.target.firstElementChild.value.trim().toUpperCase();
+  if(GX.codes[c]){st.pct=GX.codes[c];st.code=c;toast("CÓDIGO APLICADO")}else{st.pct=0;st.code="";toast("CÓDIGO NO VÁLIDO")}
+  paint();
+};
+const rc=renderCart;renderCart=function(){rc();paint()};
+const oc=openCheckout;
+openCheckout=function(){
+  oc();if(!cart.length)return;
+  q("#orderSummary").innerHTML=cart.map(x=>`${x.size} × ${x.qty} — ${money(CONFIG.product.price*x.qty)}`).join("<br>")+`<br>Envío — ${ship()?money(ship()):"Gratis"}${st.pct?`<br>Descuento — −${money(disc())}`:""}<strong style="display:block;color:#fff;margin-top:10px">TOTAL — ${money(grand())}</strong>`;
+};
+q("#checkout").onclick=openCheckout;
+renderCart();
+
+/* --- Barra de compra fija en móvil --- */
+B.insertAdjacentHTML("beforeend",`<div class="gx-sticky" id="gxSticky"><div><strong>CAMISETA GSC CORE</strong><span>${money(CONFIG.product.price)}</span></div><button class="btn small" id="gxStickyBtn">AÑADIR AL CARRITO</button></div>`);
+const pa=q(".product-actions");
+new IntersectionObserver(([e])=>q("#gxSticky").classList.toggle("show",!e.isIntersecting&&e.boundingClientRect.top<0)).observe(pa);
+q("#gxStickyBtn").onclick=()=>{if(selectedSize)addToCart();else{pa.scrollIntoView({behavior:"smooth",block:"center"});toast("ELIGE UNA TALLA")}};
+const sticky=q("#gxSticky");sticky.style.transform="translateY(100%)";sticky.style.transition="transform .3s";
+new MutationObserver(()=>{sticky.style.transform=sticky.classList.contains("show")?"none":"translateY(100%)"}).observe(sticky,{attributes:true,attributeFilter:["class"]});
+
+/* --- Contacto --- */
+q("#community").insertAdjacentHTML("afterend",`<section class="section" id="contact"><div class="container brand">
+<div><p class="eyebrow">Contacto</p><h2>HABLEMOS.</h2></div>
+<div><p class="brand-copy">Dudas sobre tallas, pedidos o colaboraciones. Escríbenos y te respondemos lo antes posible.</p>
+<p style="margin-top:20px;display:flex;gap:22px;flex-wrap:wrap"><a class="gx-link" href="mailto:${GX.email}">${GX.email}</a><a class="gx-link" href="${GX.instagram}" target="_blank" rel="noopener">Instagram ↗</a></p>
+<form class="form" id="gxContact"><label>Nombre<input name="n" required></label><label>Correo electrónico<input type="email" name="e" required></label><label>Mensaje<textarea name="m" required></textarea></label><button class="btn" type="submit">ENVIAR MENSAJE</button></form></div></div></section>`);
+q("#gxContact").onsubmit=e=>{
+  e.preventDefault();const f=Object.fromEntries(new FormData(e.target));
+  location.href="mailto:"+GX.email+"?subject="+encodeURIComponent("Mensaje de "+f.n)+"&body="+encodeURIComponent(f.m+"\n\n"+f.n+" · "+f.e);
+  toast("ABRIENDO TU CORREO");
+};
+qa('footer a[href^="mailto"]').forEach(a=>a.href="#contact");
+qa('footer a[href*="instagram.com"]').forEach(a=>a.href=GX.instagram);
+
+/* --- Aviso de almacenamiento local --- */
+if(!store.get("gsc_cookies",null)){
+  B.insertAdjacentHTML("beforeend",`<div class="gx-cookie" id="gxCk" role="dialog" aria-label="Aviso de cookies"><p>Usamos almacenamiento local para guardar tu carrito y mejorar la web.</p><div><button class="btn small" data-ck="all">ACEPTAR</button><button class="btn small dark" data-ck="min">SOLO NECESARIAS</button></div></div>`);
+  q("#gxCk").onclick=e=>{const b=e.target.closest("[data-ck]");if(b){store.set("gsc_cookies",b.dataset.ck);q("#gxCk").remove()}};
+}
+
+/* --- SEO: datos estructurados del producto --- */
+const ld=document.createElement("script");ld.type="application/ld+json";
+ld.textContent=JSON.stringify({"@context":"https://schema.org","@type":"Product",name:CONFIG.product.name,brand:{"@type":"Brand",name:"GSC GARMENTS"},color:"Negro",offers:{"@type":"Offer",priceCurrency:"EUR",price:CONFIG.product.price,availability:"https://schema.org/InStock"}});
+document.head.append(ld);
+})();
 </script>
 </body>
 </html>
