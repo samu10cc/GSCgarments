@@ -238,6 +238,8 @@ footer a:hover{color:#fff}
         <svg viewBox="0 0 24 24"><path d="M5 8h14l-1 13H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
         <span class="badge" id="cartCount">0</span>
       </button>
+      <button class="gsc-account-btn" id="gscAccountButton" type="button">REGISTRARSE</button>
+      <button class="gsc-login-btn" id="gscLoginButton" type="button">INICIAR SESIÓN</button>
     </div>
   </div>
 </header>
@@ -672,14 +674,10 @@ function showMode(next){
 }
 function openAuth(next="signup"){backdrop.classList.add("open");showMode(next)}
 function closeAuth(){backdrop.classList.remove("open")}
-const accountBtn=document.createElement("button");
-accountBtn.type="button";accountBtn.className="gsc-account-btn";accountBtn.id="gscAccountButton";accountBtn.textContent="REGISTRARSE EN GSC";
+const accountBtn=$("#gscAccountButton");
+const loginBtn=$("#gscLoginButton");
 accountBtn.addEventListener("click",()=>openAuth("signup"));
-const loginBtn=document.createElement("button");
-loginBtn.type="button";loginBtn.className="gsc-login-btn";loginBtn.id="gscLoginButton";loginBtn.textContent="INICIAR SESIÓN";
 loginBtn.addEventListener("click",()=>openAuth("login"));
-const actions=document.querySelector("header .actions")||document.querySelector(".navbar .actions");
-if(actions){actions.prepend(loginBtn);actions.prepend(accountBtn);}
 function ensureAuthButtons(){
  const target=document.querySelector("header .actions")||document.querySelector(".navbar .actions");
  if(target){
