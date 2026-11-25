@@ -644,7 +644,7 @@ function showMode(next){
 function openAuth(){backdrop.classList.add("open");showMode("signup")}
 function closeAuth(){backdrop.classList.remove("open")}
 const accountBtn=document.createElement("button");
-accountBtn.type="button";accountBtn.className="gsc-account-btn";accountBtn.id="gscAccountButton";accountBtn.textContent="MI CUENTA";
+accountBtn.type="button";accountBtn.className="gsc-account-btn";accountBtn.id="gscAccountButton";accountBtn.textContent="REGISTRARSE EN GSC";
 accountBtn.addEventListener("click",openAuth);
 const actions=document.querySelector(".actions");
 if(actions) actions.prepend(accountBtn);
@@ -660,7 +660,7 @@ function renderUser(user){
   $("#gscAuthProfile").textContent="Sesión iniciada como "+name+" · "+user.email;
   accountBtn.textContent="MI PERFIL";
  }else{
-  forms.hidden=false;$("#gscAuthProfile").hidden=true;accountBtn.textContent="MI CUENTA";
+  forms.hidden=false;$("#gscAuthProfile").hidden=true;accountBtn.textContent="REGISTRARSE EN GSC";
  }
 }
 $("#gscSignupForm").addEventListener("submit",async e=>{
