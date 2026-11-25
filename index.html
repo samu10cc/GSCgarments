@@ -10,7 +10,7 @@
 <meta property="og:description" content="Ropa sencilla. Grandes sueños.">
 <meta property="og:type" content="website">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,700;1,800&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 :root{
   --bg:#090909;--panel:#111112;--panel2:#171718;--text:#f4f2ed;--muted:#99999e;
@@ -18,10 +18,10 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth;scroll-padding-top:78px}
-body{background:var(--bg);color:var(--text);font:400 16px/1.55 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{background:var(--bg);color:var(--text);font:400 16px/1.6 "Space Grotesk",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 a{color:inherit;text-decoration:none}button,input,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer}img{display:block;max-width:100%}
-h1,h2,h3,.display{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-style:italic;font-weight:800;text-transform:uppercase;line-height:.88}
+h1,h2,h3,.display{font-family:"Archivo Black","Space Grotesk",sans-serif;font-style:normal;font-weight:400;letter-spacing:-.045em;text-transform:uppercase;line-height:.92}
 .container{width:min(var(--max),calc(100% - 40px));margin:auto}
 .eyebrow{font-size:11px;letter-spacing:.28em;color:var(--muted);font-weight:700;text-transform:uppercase}
 .muted{color:var(--muted)}
@@ -72,7 +72,7 @@ header{position:sticky;top:0;z-index:40;background:rgba(9,9,9,.82);backdrop-filt
 /* Marquee */
 .marquee{overflow:hidden;border-bottom:1px solid var(--line);border-top:1px solid var(--line);padding:15px 0;white-space:nowrap}
 .track{display:inline-flex;gap:50px;animation:marquee 22s linear infinite}
-.track span{font-family:"Barlow Condensed";font-size:25px;font-style:italic;text-transform:uppercase}
+.track span{font-family:"Archivo Black";font-size:25px;font-style:italic;text-transform:uppercase}
 .track i{font-style:normal;color:#666}
 @keyframes marquee{to{transform:translateX(-50%)}}
 
@@ -404,7 +404,7 @@ footer a:hover{color:#fff}
     <button id="closeModal" style="float:right;background:none;border:0;font-size:24px">×</button>
     <p class="eyebrow">GSC / PEDIDO</p>
     <h3 class="display">FINALIZAR COMPRA</h3>
-    <p id="checkoutNote">Esta web todavía no procesa pagos. Al enviar la solicitud se abrirá tu correo con el resumen para que podamos confirmar disponibilidad, envío y forma de pago.</p>
+    <p id="checkoutNote">Esta web todavía no procesa pagos. Envía tu solicitud y te responderemos por correo para confirmar disponibilidad, envío y forma de pago.</p>
     <form class="form" id="orderForm">
       <label>Nombre completo<input name="name" required></label>
       <label>Correo electrónico<input type="email" name="email" required></label>
@@ -523,14 +523,30 @@ document.querySelectorAll(".nav a").forEach(a=>a.addEventListener("click",()=>do
 $("#closeModal").onclick=()=>$("#checkoutModal").classList.remove("open");
 $("#cancelOrder").onclick=()=>$("#checkoutModal").classList.remove("open");
 
-$("#orderForm").onsubmit=e=>{
+window.sendGscForm=async function(payload,subject){
+  const response=await fetch("https://formsubmit.co/ajax/samucano29@gmail.com",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Accept":"application/json"},
+    body:JSON.stringify({...payload,_subject:subject,_template:"table",_captcha:"false",_replyto:payload.email||payload.e||""})
+  });
+  const result=await response.json();
+  if(!response.ok||result.success===false)throw new Error(result.message||"No se pudo enviar el formulario");
+  return result;
+};
+
+$("#orderForm").onsubmit=async e=>{
   e.preventDefault();
-  const data=Object.fromEntries(new FormData(e.target));
+  const form=e.target,button=form.querySelector('button[type="submit"]');
+  const data=Object.fromEntries(new FormData(form));
   const lines=cart.map(x=>`${x.qty} × ${CONFIG.product.name} · Talla ${x.size} · ${money(CONFIG.product.price*x.qty)}`);
-  const body=["SOLICITUD DE PEDIDO GSC", "", `Nombre: ${data.name}`, `Correo: ${data.email}`, `Teléfono: ${data.phone||"No indicado"}`, `Mensaje: ${data.address||"Sin mensaje adicional"}`, "", "Prendas:", ...lines, "", `Subtotal orientativo: ${money(total())}`, "El coste de envío y la disponibilidad deben confirmarse."].join("\n");
-  const subject=encodeURIComponent("Consulta de pedido GSC Garments");
-  window.location.href=`mailto:gscgarments@gmail.com?subject=${subject}&body=${encodeURIComponent(body)}`;
-  toast("ABRIENDO TU CORREO PARA ENVIAR LA SOLICITUD");
+  const message=["SOLICITUD DE PEDIDO GSC",...lines,"",`Subtotal orientativo: ${money(total())}`,"El coste de envío y la disponibilidad deben confirmarse.",data.address||""].join("\n");
+  button.disabled=true;button.textContent="ENVIANDO...";
+  try{
+    await window.sendGscForm({name:data.name,email:data.email,phone:data.phone||"No indicado",message},"Nuevo pedido · GSC Garments");
+    cart=[];renderCart();form.reset();$("#checkoutModal").classList.remove("open");
+    toast("SOLICITUD ENVIADA. ¡GRACIAS!");
+  }catch(err){toast("NO SE HA PODIDO ENVIAR. INTÉNTALO DE NUEVO.");}
+  finally{button.disabled=false;button.textContent="ENVIAR SOLICITUD";}
 };
 
 $("#searchBtn").onclick=()=>{
@@ -764,10 +780,14 @@ q("#community").insertAdjacentHTML("afterend",`<section class="section" id="cont
 <div><p class="brand-copy">Dudas sobre tallas, pedidos o colaboraciones. Escríbenos y te respondemos lo antes posible.</p>
 <p style="margin-top:20px;display:flex;gap:22px;flex-wrap:wrap"><a class="gx-link" href="mailto:${GX.email}">${GX.email}</a><a class="gx-link" href="${GX.instagram}" target="_blank" rel="noopener">Instagram ↗</a></p>
 <form class="form" id="gxContact"><label>Nombre<input name="n" required></label><label>Correo electrónico<input type="email" name="e" required></label><label>Mensaje<textarea name="m" required></textarea></label><button class="btn" type="submit">ENVIAR MENSAJE</button></form></div></div></section>`);
-q("#gxContact").onsubmit=e=>{
-  e.preventDefault();const f=Object.fromEntries(new FormData(e.target));
-  location.href="mailto:"+GX.email+"?subject="+encodeURIComponent("Mensaje de "+f.n)+"&body="+encodeURIComponent(f.m+"\n\n"+f.n+" · "+f.e);
-  toast("ABRIENDO TU CORREO");
+q("#gxContact").onsubmit=async e=>{
+  e.preventDefault();const form=e.target,f=Object.fromEntries(new FormData(form)),button=form.querySelector('button[type="submit"]');
+  button.disabled=true;button.textContent="ENVIANDO...";
+  try{
+    await window.sendGscForm({name:f.n,email:f.e,message:f.m},"Nuevo mensaje de contacto · GSC Garments");
+    form.reset();toast("MENSAJE ENVIADO. ¡GRACIAS!");
+  }catch(err){toast("NO SE HA PODIDO ENVIAR. INTÉNTALO DE NUEVO.");}
+  finally{button.disabled=false;button.textContent="ENVIAR MENSAJE";}
 };
 qa('footer a[href^="mailto"]').forEach(a=>a.href="#contact");
 qa('footer a[href*="instagram.com"]').forEach(a=>a.href=GX.instagram);
