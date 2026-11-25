@@ -153,18 +153,22 @@ function watchAccount(){const h=$("#gscAuthProfile");if(!h)return;new MutationOb
 
 async function renderContactInbox(){
  const host=$("#gscAdminContent");
- if(!host||host.dataset.contactInbox==="yes")return;
- host.dataset.contactInbox="yes";
- const {data,error}=await sb.from("gsc_contact_messages").select("id,name,email,subject,message,created_at").order("created_at",{ascending:false}).limit(100);
- const section=document.createElement("section");
- section.className="gsc-v2-admin-card";
- section.innerHTML="<h4>MENSAJES DE CLIENTES</h4>";
- if(error){section.insertAdjacentHTML("beforeend",'<p class="gsc-v2-muted">No se han podido cargar los mensajes.</p>');}
- else if(!data?.length){section.insertAdjacentHTML("beforeend",'<p class="gsc-v2-muted">Todavía no hay mensajes recibidos.</p>');}
- else{
-  section.insertAdjacentHTML("beforeend",data.map(m=>'<article class="gsc-v2-order"><strong>'+esc(m.subject)+'</strong><p class="gsc-v2-muted">'+esc(m.name)+' · '+esc(m.email)+' · '+new Date(m.created_at).toLocaleString("es-ES")+'</p><p style="white-space:pre-wrap">'+esc(m.message)+'</p><a class="gsc-profile-action" href="mailto:'+encodeURIComponent(m.email)+'?subject='+encodeURIComponent("Re: "+m.subject)+'">RESPONDER POR CORREO</a></article>').join(""));
+ if(!host)return;
+ let section=$("#gscContactInbox",host);
+ if(!section){
+  section=document.createElement("section");
+  section.id="gscContactInbox";
+  section.className="gsc-v2-admin-card";
+  section.innerHTML='<div class="gsc-v2-inline" style="align-items:center"><h4 style="flex:1">MENSAJES DE CLIENTES</h4><button type="button" class="gsc-profile-action" id="gscRefreshMessages">ACTUALIZAR</button></div><p class="gsc-v2-muted" id="gscContactInboxStatus">Cargando mensajes…</p><div id="gscContactInboxList"></div>';
+  host.append(section);
+  $("#gscRefreshMessages",section).onclick=()=>renderContactInbox();
  }
- host.append(section);
+ const status=$("#gscContactInboxStatus",section),list=$("#gscContactInboxList",section);
+ status.textContent="Actualizando mensajes…";
+ const {data,error}=await sb.from("gsc_contact_messages").select("id,name,email,subject,message,created_at,email_notified").order("created_at",{ascending:false}).limit(100);
+ if(error){status.textContent="No se han podido cargar los mensajes.";return}
+ status.textContent=data?.length?data.length+" mensajes recibidos":"Todavía no hay mensajes recibidos.";
+ list.innerHTML=data?.length?data.map(m=>'<article class="gsc-v2-order"><strong>'+esc(m.subject)+'</strong><p class="gsc-v2-muted">'+esc(m.name)+' · '+esc(m.email)+' · '+new Date(m.created_at).toLocaleString("es-ES")+'</p><p class="gsc-v2-muted">'+(m.email_notified?'<span class="gsc-v2-pill">AVISO POR CORREO ENVIADO</span>':'<span class="gsc-v2-pill">PENDIENTE DE AVISO POR CORREO</span>')+'</p><p style="white-space:pre-wrap">'+esc(m.message)+'</p><a class="gsc-profile-action" href="mailto:'+encodeURIComponent(m.email)+'?subject='+encodeURIComponent("Re: "+m.subject)+'">RESPONDER POR CORREO</a></article>').join(""):"";
 }
 
 async function init(){enhanceCart();setupCoupon();setupCheckout();watchAccount();await loadProducts();await loadReviews();await loadClub();await loadDrops();if(user()){addTracking();renderContactInbox()}const q=new URLSearchParams(location.search);if(q.get("checkout")==="success")toast("PAGO RECIBIDO. ACTUALIZANDO TU PEDIDO…");if(q.get("checkout")==="cancel")toast("PAGO CANCELADO. TU CARRITO SIGUE GUARDADO.");}
