@@ -552,7 +552,7 @@ window.sendGscForm=async function(payload,subject){
     body:JSON.stringify({...payload,_subject:subject,_template:"table",_captcha:"false",_replyto:payload.email||payload.e||""})
   });
   const result=await response.json();
-  if(!response.ok||result.success===false)throw new Error(result.message||"No se pudo enviar el formulario");
+  if(!response.ok||result.success===false||result.success==="false")throw new Error(result.message||"No se pudo enviar el formulario");
   return result;
 };
 
