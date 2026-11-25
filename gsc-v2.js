@@ -64,17 +64,12 @@ function enhanceCart(){
 }
 function setupCoupon(){
  const form=$("#gxCode");if(!form)return;
- form.onsubmit=async e=>{
-  e.preventDefault();const code=form.querySelector("input").value.trim().toUpperCase();
+ form.onsubmit=async e=>{e.preventDefault();const code=form.querySelector("input").value.trim().toUpperCase();
   const r=await sb.from("gsc_coupons").select("code,discount_type,discount_value,min_order_total,max_uses,used_count").eq("code",code).eq("active",true).maybeSingle();
-  if(r.error||!r.data||(r.data.max_uses&&r.data.used_count>=r.data.max_uses)){coupon=null;window.GSC_COUPON_CODE=null;toast("CÓDIGO NO VÁLIDO");return}
+  if(r.error||!r.data||(r.data.max_uses&&r.data.used_count>=r.data.max_uses)){coupon=null;window.GSC_COUPON_CODE=null;window.GSC_GX_API?.clearCoupon();toast("CÓDIGO NO VÁLIDO");return}
   const subtotal=window.GSC_CART_API.items.reduce((n,x)=>n+Number(x.price??window.GSC_CONFIG.product.price)*x.qty,0);
   if(subtotal<Number(r.data.min_order_total||0)){toast("EL PEDIDO NO ALCANZA EL MÍNIMO DEL CUPÓN");return}
-  coupon=r.data;window.GSC_COUPON_CODE=code;
-  const discount=Math.min(subtotal,r.data.discount_type==="percentage"?subtotal*Number(r.data.discount_value)/100:Number(r.data.discount_value));
-  const shipping=subtotal-discount>=50?0:4.99;
-  $("#gxTot").innerHTML='<div><span>Subtotal</span><span>'+money(subtotal)+'</span></div><div><span>Descuento '+esc(code)+'</span><span>−'+money(discount)+'</span></div><div><span>Envío</span><span>'+(shipping?money(shipping):"Gratis")+'</span></div><div class="t"><span>TOTAL</span><span>'+money(subtotal-discount+shipping)+'</span></div>';
-  toast("CÓDIGO VALIDADO");
+  coupon=r.data;window.GSC_COUPON_CODE=code;window.GSC_GX_API?.setCoupon(r.data);toast("CÓDIGO VALIDADO");
  };
 }
 function setupCheckout(){
