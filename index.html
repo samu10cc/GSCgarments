@@ -1135,11 +1135,18 @@ q("#gxContact").onsubmit=async e=>{
   e.preventDefault();const form=e.target,f=Object.fromEntries(new FormData(form)),button=form.querySelector('button[type="submit"]'),status=q("#gxContactStatus");
   button.disabled=true;button.textContent="ENVIANDO…";status.textContent="Enviando tu mensaje…";
   try{
-    const {error:saveError}=await window.GSC_SUPABASE.from("gsc_contact_messages").insert({name:f.n.trim(),email:f.e.trim(),subject:f.s.trim(),message:f.m.trim()});
-    if(saveError)throw new Error("No se ha podido guardar el mensaje. Inténtalo de nuevo.");
-    await window.sendGscForm({name:f.n,email:f.e,subject:f.s,message:f.m},"Nuevo mensaje de contacto · GSC Garments");
-    form.reset();status.textContent="¡Mensaje recibido! Te responderemos lo antes posible.";toast("MENSAJE RECIBIDO. ¡GRACIAS!");
-  }catch(err){status.textContent=err.message||"No se ha podido enviar. Inténtalo de nuevo.";toast("NO SE HA PODIDO ENVIAR. INTÉNTALO DE NUEVO.");}
+    const {data:savedMessage,error:saveError}=await window.GSC_SUPABASE.from("gsc_contact_messages").insert({name:f.n.trim(),email:f.e.trim(),subject:f.s.trim(),message:f.m.trim()}).select("id").single();
+    if(saveError||!savedMessage)throw new Error("No se ha podido guardar el mensaje. Inténtalo de nuevo.");
+    let emailSent=false;
+    try{
+      await window.sendGscForm({name:f.n,email:f.e,subject:f.s,message:f.m},"Nuevo mensaje de contacto · GSC Garments");
+      emailSent=true;
+      await window.GSC_SUPABASE.from("gsc_contact_messages").update({email_notified:true}).eq("id",savedMessage.id);
+    }catch(emailError){console.error("GSC contact email notification failed",emailError);}
+    form.reset();
+    status.textContent=emailSent?"¡Mensaje recibido! Te responderemos lo antes posible.":"Tu mensaje se ha guardado correctamente. La notificación por correo está pendiente; GSC lo tiene disponible en su panel.";
+    toast(emailSent?"MENSAJE RECIBIDO. ¡GRACIAS!":"MENSAJE GUARDADO");
+  }catch(err){status.textContent=err.message||"No se ha podido enviar. Inténtalo de nuevo.";toast("NO SE HA PODIDO GUARDAR. INTÉNTALO DE NUEVO.");}
   finally{button.disabled=false;button.textContent="ENVIAR MENSAJE";}
 };
 qa('footer a[href^="mailto"]').forEach(a=>a.href="#contact");
