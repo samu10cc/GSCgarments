@@ -590,8 +590,9 @@ $("#orderForm").onsubmit=async e=>{
   e.preventDefault();
   const form=e.target,button=form.querySelector('button[type="submit"]');
   const data=Object.fromEntries(new FormData(form));
-  const lines=cart.map(x=>`${x.qty} × ${CONFIG.product.name} · Talla ${x.size} · ${money(CONFIG.product.price*x.qty)}`);
-  const message=["SOLICITUD DE PEDIDO GSC",...lines,"",`Subtotal orientativo: ${money(total())}`,"El coste de envío y la disponibilidad deben confirmarse.",data.address||""].join("\n");
+  const totals=window.GSC_GX_API?.getTotals?.()||{subtotal:total(),discount:0,shipping:0,total:total(),code:null};
+  const lines=cart.map(x=>`${x.qty} × ${x.name||CONFIG.product.name} · Talla ${x.size} · ${money((x.price??CONFIG.product.price)*x.qty)}`);
+  const message=["SOLICITUD DE PEDIDO GSC",...lines,"",`Subtotal orientativo: ${money(totals.subtotal)}`,...(totals.discount?[ `Descuento ${totals.code||""}: −${money(totals.discount)}` ]:[]),`Envío estimado: ${money(totals.shipping)}`,`TOTAL ESTIMADO: ${money(totals.total)}`,"El coste de envío y la disponibilidad deben confirmarse.",data.address||""].join("\n");
   button.disabled=true;button.textContent="ENVIANDO...";
   try{
     const {data:sessionData}=await window.GSC_SUPABASE.auth.getSession();
@@ -599,8 +600,8 @@ $("#orderForm").onsubmit=async e=>{
       const user=sessionData.session.user;
       const {error:orderError}=await window.GSC_SUPABASE.from("gsc_orders").insert({
         user_id:user.id,customer_name:data.name,email:data.email,phone:data.phone||null,
-        items:cart.map(x=>({product_id:x.id,name:CONFIG.product.name,size:x.size,quantity:x.qty,unit_price:CONFIG.product.price})),
-        total:total(),notes:data.address||null
+        items:cart.map(x=>({product_id:x.id,name:x.name||CONFIG.product.name,size:x.size,quantity:x.qty,unit_price:x.price??CONFIG.product.price})),
+        total:totals.total,coupon_code:totals.code,discount_total:totals.discount,shipping_total:totals.shipping,notes:data.address||null
       });
       if(orderError)throw new Error("No se ha podido guardar el pedido en tu cuenta.");
     }
@@ -1132,7 +1133,7 @@ const paint=()=>{
   q("#gxShip").innerHTML=`<p>${left>0?`Te faltan <b>${money(left)}</b> para el envío gratis`:"Tienes <b>envío gratis</b>"}</p><i><u style="width:${Math.min(100,net/GX.freeShipFrom*100)}%"></u></i>`;
   q("#gxTot").innerHTML=`<div><span>Subtotal</span><span>${money(sub())}</span></div>${st.active?`<div><span>Descuento ${st.code}</span><span>−${money(disc())}</span></div>`:""}<div><span>Envío</span><span>${cart.length?(ship()?money(ship()):"Gratis"):"—"}</span></div><div class="t"><span>TOTAL</span><span>${money(cart.length?grand():0)}</span></div>`;
 };
-window.GSC_GX_API={setCoupon(c){st.pct=c.discount_type==="percentage"?Number(c.discount_value):0;st.fixed=c.discount_type==="fixed"?Number(c.discount_value):null;st.code=c.code;st.active=true;paint()},clearCoupon(){st.pct=0;st.fixed=null;st.code="";st.active=false;paint()}};
+window.GSC_GX_API={setCoupon(c){st.pct=c.discount_type==="percentage"?Number(c.discount_value):0;st.fixed=c.discount_type==="fixed"?Number(c.discount_value):null;st.code=c.code;st.active=true;paint()},clearCoupon(){st.pct=0;st.fixed=null;st.code="";st.active=false;paint()},getTotals(){return {subtotal:sub(),discount:disc(),shipping:ship(),total:grand(),code:st.active?st.code:null}}};
 if(q("#gxCode"))q("#gxCode").onsubmit=e=>{
   e.preventDefault();const c=e.target.firstElementChild.value.trim().toUpperCase();
   if(GX.codes[c]){st.pct=GX.codes[c];st.code=c;toast("CÓDIGO APLICADO")}else{st.pct=0;st.code="";toast("CÓDIGO NO VÁLIDO")}
