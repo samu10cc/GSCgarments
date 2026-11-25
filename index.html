@@ -731,11 +731,10 @@ async function loadStoreProduct(){
  if(error||!data)return;
  if(window.GSC_CONFIG)window.GSC_CONFIG.product.price=Number(data.price);
  const price=document.querySelector(".product-info .price");
- const add=$("#add");
+ const add=$("#add"),buy=$("#buy");
  if(price)price.textContent=moneyGsc(data.price);
- if(add)add.textContent="AÑADIR AL CARRITO — "+moneyGsc(data.price);
- const buy=$("#buy");
- if(buy)buy.textContent="COMPRAR AHORA";
+ if(add){add.textContent=data.active?"AÑADIR AL CARRITO — "+moneyGsc(data.price):"PRODUCTO NO DISPONIBLE";add.disabled=!data.active;}
+ if(buy){buy.textContent=data.active?"COMPRAR AHORA":"NO DISPONIBLE";buy.disabled=!data.active;}
 }
 async function updateFavoriteButton(){
  const existing=$("#gscFavoriteButton");
