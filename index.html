@@ -359,6 +359,24 @@ footer a:hover{color:#fff}
   </div>
 </section>
 
+
+<section class="section" id="contact">
+  <div class="container">
+    <div class="section-head">
+      <div><p class="eyebrow">06 / GSC GARMENTS</p><h2>CONTACTO.</h2></div>
+      <p class="section-intro">¿Tienes alguna duda sobre una prenda, un pedido o GSC? Escríbenos y te responderemos lo antes posible.</p>
+    </div>
+    <form class="form" id="gscContactForm" style="max-width:680px">
+      <label>Nombre completo<input name="name" required maxlength="80" autocomplete="name"></label>
+      <label>Correo electrónico<input name="email" type="email" required maxlength="254" autocomplete="email"></label>
+      <label>Asunto<input name="subject" required maxlength="120"></label>
+      <label>Tu mensaje<textarea name="message" required minlength="10" maxlength="5000" rows="6" placeholder="Escribe aquí tu mensaje…"></textarea></label>
+      <button class="btn" type="submit">ENVIAR MENSAJE</button>
+      <p id="gscContactStatus" class="muted" role="status" aria-live="polite"></p>
+    </form>
+  </div>
+</section>
+
 </main>
 
 <footer>
@@ -537,6 +555,36 @@ window.sendGscForm=async function(payload,subject){
   if(!response.ok||result.success===false)throw new Error(result.message||"No se pudo enviar el formulario");
   return result;
 };
+
+
+$("#gscContactForm")?.addEventListener("submit",async e=>{
+  e.preventDefault();
+  const form=e.currentTarget,button=form.querySelector('button[type="submit"]'),status=$("#gscContactStatus");
+  const data=Object.fromEntries(new FormData(form));
+  button.disabled=true;button.textContent="ENVIANDO…";status.textContent="Enviando tu mensaje…";
+  try{
+    const {error:saveError}=await window.GSC_SUPABASE.from("gsc_contact_messages").insert({
+      name:String(data.name).trim(),email:String(data.email).trim(),subject:String(data.subject).trim(),message:String(data.message).trim()
+    });
+    if(saveError)throw new Error("No se ha podido guardar tu mensaje. Inténtalo de nuevo.");
+    let emailSent=true;
+    try{
+      await window.sendGscForm({
+        name:String(data.name).trim(),
+        email:String(data.email).trim(),
+        subject:String(data.subject).trim(),
+        message:String(data.message).trim()
+      },"Nuevo mensaje de contacto · GSC Garments");
+    }catch(emailError){emailSent=false;console.error("GSC contact email notification failed",emailError);}
+    form.reset();
+    status.textContent=emailSent
+      ?"¡Mensaje recibido! Te responderemos lo antes posible."
+      :"Tu mensaje se ha guardado correctamente. La notificación por correo está temporalmente pendiente; GSC lo revisará desde el panel de administración.";
+    if(window.GSC_CART_API?.toast)window.GSC_CART_API.toast("MENSAJE RECIBIDO");
+  }catch(err){
+    status.textContent=err.message||"No se ha podido enviar el mensaje. Inténtalo de nuevo.";
+  }finally{button.disabled=false;button.textContent="ENVIAR MENSAJE";}
+});
 
 $("#orderForm").onsubmit=async e=>{
   e.preventDefault();
@@ -727,7 +775,7 @@ $("#gscSignupForm").addEventListener("submit",async e=>{
  button.disabled=false;
  if(error){message(error.message);return}
  if(result.session){renderUser(result.user);message("Cuenta creada correctamente.");}
- else message("Te hemos enviado un correo para confirmar tu cuenta. Revisa tu bandeja de entrada.");
+ else message("Te hemos enviado un correo para confirmar tu cuenta. Revisa tu bandeja de entrada. Código de bienvenida: WELCOME10 (10% de descuento).");
 });
 $("#gscLoginForm").addEventListener("submit",async e=>{
  e.preventDefault();const form=e.currentTarget,data=new FormData(form),button=form.querySelector("button[type=submit]");
@@ -814,7 +862,7 @@ async function renderAccountPanel(user){
  const admin=!!adminRes.data;
  const fullName=profile.full_name||user.user_metadata?.full_name||user.user_metadata?.name||"";
  profileBox.innerHTML=`
-  <div class="gsc-profile-head"><div><strong>MI CUENTA GSC</strong><div class="gsc-profile-email">${esc(user.email)}</div></div><button class="gsc-profile-action" id="gscLogout">CERRAR SESIÓN</button></div>
+  <div class="gsc-profile-section"><h3>CÓDIGO DE BIENVENIDA</h3><p>Usa <strong>WELCOME10</strong> en tu carrito y consigue un 10% de descuento.</p></div><div class="gsc-profile-head"><div><strong>MI CUENTA GSC</strong><div class="gsc-profile-email">${esc(user.email)}</div></div><button class="gsc-profile-action" id="gscLogout">CERRAR SESIÓN</button></div>
   <div class="gsc-profile-section">
    <h3>DATOS PERSONALES</h3>
    <label class="gsc-profile-field">Nombre completo<input id="gscProfileName" maxlength="80" value="${esc(fullName)}"></label>
