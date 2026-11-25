@@ -48,7 +48,7 @@ async function loadProducts(){
    window.GSC_CART_API.addProduct({id:p.id,name:p.name,price:Number(p.price),image:p.image_url||p.images?.[0]?.url||""},size);
   });
  };
- ["#gscCatalogSearch","#gscCatalogCategory","#gscCatalogSort"].forEach(selector=>$(selector)?.addEventListener(selector==="#gscCatalogSearch"?"input":"change",render));
+ if($("#gscCatalogSearch"))$("#gscCatalogSearch").oninput=render;if(categorySelect)categorySelect.onchange=render;if($("#gscCatalogSort"))$("#gscCatalogSort").onchange=render;
  render();
  $("#gscReviewProduct").innerHTML=products.filter(p=>p.id!=="core").map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join("");
 }
