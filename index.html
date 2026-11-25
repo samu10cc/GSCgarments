@@ -543,10 +543,10 @@ $("#orderForm").onsubmit=async e=>{
   const message=["SOLICITUD DE PEDIDO GSC",...lines,"",`Subtotal orientativo: ${money(total())}`,"El coste de envío y la disponibilidad deben confirmarse.",data.address||""].join("\n");
   button.disabled=true;button.textContent="ENVIANDO...";
   try{
-    const {data:sessionData}=await sb.auth.getSession();
+    const {data:sessionData}=await window.GSC_SUPABASE.auth.getSession();
     if(sessionData.session?.user){
       const user=sessionData.session.user;
-      const {error:orderError}=await sb.from("gsc_orders").insert({
+      const {error:orderError}=await window.GSC_SUPABASE.from("gsc_orders").insert({
         user_id:user.id,customer_name:data.name,email:data.email,phone:data.phone||null,
         items:cart.map(x=>({product_id:x.id,name:CONFIG.product.name,size:x.size,quantity:x.qty,unit_price:CONFIG.product.price})),
         total:total(),notes:data.address||null
@@ -658,6 +658,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL = "https://cmvcpnqgausnrkashrvi.supabase.co";
 const SUPABASE_KEY = "sb_publishable_GfXZh4_xyI9wB8tr4SRH_A_fLrpC6rS";
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+window.GSC_SUPABASE = sb;
 const $ = s => document.querySelector(s);
 const backdrop=$("#gscAuthBackdrop"), msg=$("#gscAuthMessage"), forms=$("#gscAuthForms");
 let mode="signup";
