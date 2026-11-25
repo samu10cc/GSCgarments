@@ -151,17 +151,18 @@ async function renderAdminV2(){
 async function reloadAdmin(){const h=$("#gscAdminContent");if(!h)return;h.dataset.v2="";$("#gscV2Admin")?.remove();await renderAdminV2()}
 function watchAccount(){const h=$("#gscAuthProfile");if(!h)return;new MutationObserver(()=>{if(user()){addTracking();loadClub();loadDrops();if($("#gscAdminContent")&&!$("#gscV2Admin"))renderAdminV2();if($("#gscAdminContent"))renderContactInbox()}}).observe(h,{childList:true,subtree:true})}
 
-async function renderContactInbox(){
+async function renderContactInbox(force=false){
  const host=$("#gscAdminContent");
  if(!host)return;
  let section=$("#gscContactInbox",host);
+ if(section&&!force)return;
  if(!section){
   section=document.createElement("section");
   section.id="gscContactInbox";
   section.className="gsc-v2-admin-card";
   section.innerHTML='<div class="gsc-v2-inline" style="align-items:center"><h4 style="flex:1">MENSAJES DE CLIENTES</h4><button type="button" class="gsc-profile-action" id="gscRefreshMessages">ACTUALIZAR</button></div><p class="gsc-v2-muted" id="gscContactInboxStatus">Cargando mensajes…</p><div id="gscContactInboxList"></div>';
   host.append(section);
-  $("#gscRefreshMessages",section).onclick=()=>renderContactInbox();
+  $("#gscRefreshMessages",section).onclick=()=>renderContactInbox(true);
  }
  const status=$("#gscContactInboxStatus",section),list=$("#gscContactInboxList",section);
  status.textContent="Actualizando mensajes…";
