@@ -809,7 +809,8 @@ async function renderAccountPanel(user){
   news=created||{consent:true,unsubscribed_at:null};
  }
  const favs=favRes.data||[],orders=orderRes.data||[];
- if(currentGscUser?.id!==user.id)return;\n const admin=!!adminRes.data;
+ if(currentGscUser?.id!==user.id)return;
+ const admin=!!adminRes.data;
  const fullName=profile.full_name||user.user_metadata?.full_name||user.user_metadata?.name||"";
  profileBox.innerHTML=`
   <div class="gsc-profile-head"><div><strong>MI CUENTA GSC</strong><div class="gsc-profile-email">${esc(user.email)}</div></div><button class="gsc-profile-action" id="gscLogout">CERRAR SESIÓN</button></div>
