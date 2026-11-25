@@ -16,7 +16,8 @@ async function loadProducts(){
  const r=await sb.from("gsc_products").select("id,name,price,color,description,active,stock,image_url,images,category,featured,sizes").eq("active",true).order("featured",{ascending:false}).order("created_at",{ascending:false});
  if(r.error){$("#gscCatalogGrid").textContent="No se ha podido cargar la colección.";return}
  products=r.data||[];
- $("#gscCatalogGrid").innerHTML=products.length?products.map(p=>{
+ const catalogProducts=products.filter(p=>p.id!=="core");
+ $("#gscCatalogGrid").innerHTML=catalogProducts.length?catalogProducts.map(p=>{
   const image=p.image_url||p.images?.[0]?.url||window.GSC_CONFIG.product.images.front;
   const sizes=p.sizes?.length?p.sizes:["S","M","L","XL","XXL"];
   return '<article class="gsc-v2-card" data-product="'+esc(p.id)+'"><img src="'+esc(image)+'" alt="'+esc(p.name)+'" loading="lazy"><div class="gsc-v2-card-body"><p class="eyebrow">'+esc(p.category||"GSC")+'</p><h3>'+esc(p.name)+'</h3><p>'+esc(p.description||p.color||"Edición GSC")+'</p><strong>'+money(p.price)+'</strong><select class="gsc-v2-size">'+sizes.map(s=>'<option value="'+esc(s)+'">'+esc(s)+' · '+(Number(p.stock?.[s]||0)>0?p.stock[s]+" uds.":"Agotado")+'</option>').join("")+'</select><button class="btn small gsc-v2-add" '+(sizes.every(s=>Number(p.stock?.[s]||0)<=0)?"disabled":"")+' type="button">AÑADIR AL CARRITO</button></div></article>';
@@ -52,7 +53,9 @@ $("#gscJoinClub").onclick=async()=>{
 };
 async function loadDrops(){
  const r=await sb.from("gsc_drops").select("id,name,description,starts_at,image_url").eq("active",true).order("starts_at");
- const host=$("#gscDropsList");
+ const host=$("#gscDropsList"),u=user();let member=false;
+ if(u){const m=await sb.from("gsc_club_members").select("user_id").eq("user_id",u.id).maybeSingle();member=!!m.data}
+ if(!member){host.innerHTML='<p class="gsc-v2-muted">Los detalles de los próximos lanzamientos son exclusivos del GSC Club. Únete para descubrirlos antes.</p>';return}
  host.innerHTML=r.data?.length?r.data.map(d=>'<div class="gsc-v2-order">'+(d.image_url?'<img src="'+esc(d.image_url)+'" style="width:100%;max-height:220px;object-fit:cover" alt="">':"")+'<strong>'+esc(d.name)+'</strong><p class="gsc-v2-muted">'+esc(d.description||"Lanzamiento GSC")+'</p>'+(d.starts_at?'<small>'+new Date(d.starts_at).toLocaleString("es-ES")+'</small>':"")+'</div>').join(""):'<p class="gsc-v2-muted">Próximamente anunciaremos nuevos drops.</p>';
 }
 function enhanceCart(){
@@ -61,10 +64,17 @@ function enhanceCart(){
 }
 function setupCoupon(){
  const form=$("#gxCode");if(!form)return;
- form.onsubmit=async e=>{e.preventDefault();const code=form.querySelector("input").value.trim().toUpperCase();
+ form.onsubmit=async e=>{
+  e.preventDefault();const code=form.querySelector("input").value.trim().toUpperCase();
   const r=await sb.from("gsc_coupons").select("code,discount_type,discount_value,min_order_total,max_uses,used_count").eq("code",code).eq("active",true).maybeSingle();
   if(r.error||!r.data||(r.data.max_uses&&r.data.used_count>=r.data.max_uses)){coupon=null;window.GSC_COUPON_CODE=null;toast("CÓDIGO NO VÁLIDO");return}
-  coupon=r.data;window.GSC_COUPON_CODE=code;toast("CÓDIGO VALIDADO. SE APLICARÁ EN EL PAGO.");
+  const subtotal=window.GSC_CART_API.items.reduce((n,x)=>n+Number(x.price??window.GSC_CONFIG.product.price)*x.qty,0);
+  if(subtotal<Number(r.data.min_order_total||0)){toast("EL PEDIDO NO ALCANZA EL MÍNIMO DEL CUPÓN");return}
+  coupon=r.data;window.GSC_COUPON_CODE=code;
+  const discount=Math.min(subtotal,r.data.discount_type==="percentage"?subtotal*Number(r.data.discount_value)/100:Number(r.data.discount_value));
+  const shipping=subtotal-discount>=50?0:4.99;
+  $("#gxTot").innerHTML='<div><span>Subtotal</span><span>'+money(subtotal)+'</span></div><div><span>Descuento '+esc(code)+'</span><span>−'+money(discount)+'</span></div><div><span>Envío</span><span>'+(shipping?money(shipping):"Gratis")+'</span></div><div class="t"><span>TOTAL</span><span>'+money(subtotal-discount+shipping)+'</span></div>';
+  toast("CÓDIGO VALIDADO");
  };
 }
 function setupCheckout(){
