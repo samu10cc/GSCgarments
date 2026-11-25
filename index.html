@@ -574,9 +574,6 @@ renderCart();
 
 <!-- MEJORAS GSC GARMENTS -->
 
-<!-- ============================================================
-  GSC GARMENTS · BLOQUE DE MEJORAS
-  Pega TODO este bloque justo antes de 
 <style id="GSC_SUPABASE_ACCOUNT_V1">
 .gsc-account-btn{border:1px solid var(--line);background:transparent;color:var(--text);padding:0 14px;height:40px;font-size:10px;letter-spacing:.14em;font-weight:700;text-transform:uppercase}
 .gsc-account-btn:hover{border-color:var(--text)}
@@ -690,11 +687,6 @@ $("#gscGoogleLogin").addEventListener("click",async()=>{
 sb.auth.onAuthStateChange((_event,session)=>renderUser(session?.user||null));
 sb.auth.getSession().then(({data})=>renderUser(data.session?.user||null));
 </script>
-
-</body>, DESPUÉS de tu bloque de JavaScript actual.
-  No toca tus imágenes ni tu código: se apoya en CONFIG, cart, addToCart, etc.
-  Lo editable está en el objeto GX (arriba del script).
-============================================================ -->
 <style>
 .gx-progress{position:fixed;top:0;left:0;height:2px;width:0;background:var(--text);z-index:90}
 .gx-trust{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
