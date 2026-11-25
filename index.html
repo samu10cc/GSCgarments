@@ -458,16 +458,16 @@ function toast(msg){
   clearTimeout(window.__toast);window.__toast=setTimeout(()=>el.classList.remove("show"),2200);
 }
 function count(){return cart.reduce((n,x)=>n+x.qty,0)}
-function total(){return cart.reduce((n,x)=>n+CONFIG.product.price*x.qty,0)}
+function total(){return cart.reduce((n,x)=>n+Number(x.price??CONFIG.product.price)*x.qty,0)}
 
 function renderCart(){
   $("#cartCount").textContent=count() || "";
   $("#cartLines").innerHTML = cart.length ? cart.map((x,i)=>`
     <div class="cart-line">
-      <img src="${CONFIG.product.images.front}" alt="">
+      <img src="${x.image||CONFIG.product.images.front}" alt="">
       <div>
-        <strong>${CONFIG.product.name}</strong>
-        <small>Talla ${x.size} · ${money(CONFIG.product.price)}</small>
+        <strong>${x.name||CONFIG.product.name}</strong>
+        <small>Talla ${x.size} · ${money(x.price??CONFIG.product.price)}</small>
         <button class="remove" data-remove="${i}">Eliminar</button>
       </div>
       <div class="qty">
@@ -482,14 +482,14 @@ function openCart(){document.body.classList.add("cart-open")}
 function closeCart(){document.body.classList.remove("cart-open")}
 function addToCart(size=selectedSize){
   if(!size){toast("ELIGE UNA TALLA");return}
-  const found=cart.find(x=>x.size===size);
+  const found=cart.find(x=>x.id===CONFIG.product.id&&x.size===size);
   if(found) found.qty++;
-  else cart.push({id:CONFIG.product.id,size,qty:1});
+  else cart.push({id:CONFIG.product.id,name:CONFIG.product.name,price:CONFIG.product.price,image:CONFIG.product.images.front,size,qty:1});
   renderCart();openCart();toast("AÑADIDO AL CARRITO");
 }
 function openCheckout(){
   if(!cart.length){toast("TU CARRITO ESTÁ VACÍO");return}
-  $("#orderSummary").innerHTML=cart.map(x=>`${x.size} × ${x.qty} — ${money(CONFIG.product.price*x.qty)}`).join("<br>")+"<br><strong style='display:block;color:#fff;margin-top:10px'>TOTAL — "+money(total())+"</strong>";
+  $("#orderSummary").innerHTML=cart.map(x=>`${x.name||CONFIG.product.name} · ${x.size} × ${x.qty} — ${money((x.price??CONFIG.product.price)*x.qty)}`).join("<br>")+"<br><strong style='display:block;color:#fff;margin-top:10px'>TOTAL — "+money(total())+"</strong>";
   $("#checkoutModal").classList.add("open");closeCart();
 }
 function buyNow(){
@@ -583,6 +583,15 @@ document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){closeCart();$("#checkoutModal").classList.remove("open");$("#searchModal").classList.remove("open")}
 });
 renderCart();
+window.GSC_CART_API={
+ get items(){return cart},
+ addProduct(product,size){const found=cart.find(x=>x.id===product.id&&x.size===size);if(found)found.qty++;else cart.push({...product,size,qty:1});renderCart();openCart();toast("AÑADIDO AL CARRITO")},
+ getRenderer(){return renderCart},
+ setRenderer(fn){renderCart=fn},
+ render(){renderCart()},
+ open(){openCart()},
+ toast
+};
 </script>
 
 <!-- MEJORAS GSC GARMENTS -->
@@ -898,6 +907,7 @@ async function renderAdminPanel(){
 sb.auth.onAuthStateChange((_event,session)=>renderUser(session?.user||null));
 addFavoriteButton();
 loadStoreProduct();
+window.GSC_AUTH_API={getUser:()=>currentGscUser,openAuth,closeAuth,refresh:()=>currentGscUser?renderAccountPanel(currentGscUser):null};
 
 </script>
 <style>
@@ -1124,5 +1134,6 @@ ld.textContent=JSON.stringify({"@context":"https://schema.org","@type":"Product"
 document.head.append(ld);
 })();
 </script>
+<script type="module" src="/gsc-v2.js"></script>
 </body>
 </html>
