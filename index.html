@@ -443,6 +443,7 @@ const CONFIG = {
   STRIPE_PAYMENT_LINK:""
 };
 
+window.GSC_CONFIG = CONFIG;
 let cart = JSON.parse(localStorage.getItem("gsc_cart") || "[]");
 let selectedSize = null;
 
@@ -542,10 +543,20 @@ $("#orderForm").onsubmit=async e=>{
   const message=["SOLICITUD DE PEDIDO GSC",...lines,"",`Subtotal orientativo: ${money(total())}`,"El coste de envío y la disponibilidad deben confirmarse.",data.address||""].join("\n");
   button.disabled=true;button.textContent="ENVIANDO...";
   try{
+    const {data:sessionData}=await sb.auth.getSession();
+    if(sessionData.session?.user){
+      const user=sessionData.session.user;
+      const {error:orderError}=await sb.from("gsc_orders").insert({
+        user_id:user.id,customer_name:data.name,email:data.email,phone:data.phone||null,
+        items:cart.map(x=>({product_id:x.id,name:CONFIG.product.name,size:x.size,quantity:x.qty,unit_price:CONFIG.product.price})),
+        total:total(),notes:data.address||null
+      });
+      if(orderError)throw new Error("No se ha podido guardar el pedido en tu cuenta.");
+    }
     await window.sendGscForm({name:data.name,email:data.email,phone:data.phone||"No indicado",message},"Nuevo pedido · GSC Garments");
     cart=[];renderCart();form.reset();$("#checkoutModal").classList.remove("open");
     toast("SOLICITUD ENVIADA. ¡GRACIAS!");
-  }catch(err){toast("NO SE HA PODIDO ENVIAR. INTÉNTALO DE NUEVO.");}
+  }catch(err){toast(err.message==="No se ha podido guardar el pedido en tu cuenta."?err.message:"NO SE HA PODIDO ENVIAR. INTÉNTALO DE NUEVO.");}
   finally{button.disabled=false;button.textContent="ENVIAR SOLICITUD";}
 };
 
@@ -596,6 +607,25 @@ renderCart();
 .gsc-auth-message{min-height:20px;margin-top:12px;font-size:12px!important}
 .gsc-auth-profile{margin-top:18px;padding:15px;border:1px solid var(--line);font-size:13px}
 @media(max-width:560px){.gsc-account-btn,.gsc-login-btn{padding:0 8px;font-size:8px;letter-spacing:.08em}.gsc-auth-card{padding:22px}}
+
+.gsc-auth-card{width:min(560px,100%)}
+.gsc-auth-profile{display:grid;gap:16px}
+.gsc-profile-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.gsc-profile-email{color:var(--muted);font-size:12px;word-break:break-word}
+.gsc-profile-section{border-top:1px solid var(--line);padding-top:15px;display:grid;gap:10px}
+.gsc-profile-section h3{font-size:12px;letter-spacing:.14em;margin:0}
+.gsc-profile-field{display:grid;gap:6px;font-size:10px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.gsc-profile-field input{width:100%;padding:12px;background:#090909;border:1px solid var(--line);color:#fff}
+.gsc-profile-action{border:1px solid var(--line);background:transparent;color:#fff;padding:11px 14px;font-size:10px;letter-spacing:.12em;font-weight:700}
+.gsc-profile-action.primary{background:#fff;color:#090909;border-color:#fff}
+.gsc-profile-list{display:grid;gap:8px}
+.gsc-profile-item{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:12px}
+.gsc-profile-muted{color:var(--muted);font-size:12px}
+.gsc-admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.gsc-fav-btn{border:1px solid var(--line);background:transparent;color:var(--text);min-width:46px;font-size:20px}
+.gsc-fav-btn.active{color:#fff;border-color:#fff}
+.gsc-auth-card .gsc-auth-message{margin-bottom:0}
+@media(max-width:560px){.gsc-auth-card{padding:20px}.gsc-admin-grid{grid-template-columns:1fr}}
 </style>
 <div class="gsc-auth-backdrop" id="gscAuthBackdrop" role="dialog" aria-modal="true" aria-labelledby="gscAuthTitle">
  <section class="gsc-auth-card">
@@ -652,13 +682,14 @@ $("#gscAuthClose").addEventListener("click",closeAuth);
 backdrop.addEventListener("click",e=>{if(e.target===backdrop)closeAuth()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeAuth()});
 function renderUser(user){
+ currentGscUser=user||null;
  if(user){
   forms.hidden=true;$("#gscAuthProfile").hidden=false;
-  const name=user.user_metadata?.full_name||user.user_metadata?.name||user.email||"Cliente GSC";
-  $("#gscAuthProfile").textContent="Sesión iniciada como "+name+" · "+user.email;
   accountBtn.textContent="MI PERFIL";loginBtn.hidden=true;
+  renderAccountPanel(user).catch(()=>message("No se han podido cargar todos los datos de tu cuenta."));
  }else{
   forms.hidden=false;$("#gscAuthProfile").hidden=true;accountBtn.textContent="REGISTRARSE";loginBtn.hidden=false;
+  updateFavoriteButton();
  }
 }
 $("#gscSignupForm").addEventListener("submit",async e=>{
@@ -686,7 +717,159 @@ $("#gscGoogleLogin").addEventListener("click",async()=>{
  if(error)message("Google todavía no está configurado en el proveedor de autenticación. Puedes registrarte con correo mientras tanto.");
 });
 sb.auth.onAuthStateChange((_event,session)=>renderUser(session?.user||null));
+
 sb.auth.getSession().then(({data})=>renderUser(data.session?.user||null));
+
+const profileBox=$("#gscAuthProfile");
+const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let currentGscUser=null, favoriteActive=false;
+const moneyGsc=n=>Number(n||0).toFixed(2).replace(".",",")+" €";
+
+async function loadStoreProduct(){
+ const {data,error}=await sb.from("gsc_products").select("id,name,price,active,stock").eq("id","core").maybeSingle();
+ if(error||!data)return;
+ if(window.GSC_CONFIG)window.GSC_CONFIG.product.price=Number(data.price);
+ const price=document.querySelector(".product-info .price");
+ const add=$("#add");
+ if(price)price.textContent=moneyGsc(data.price);
+ if(add)add.textContent="AÑADIR AL CARRITO — "+moneyGsc(data.price);
+ const buy=$("#buy");
+ if(buy)buy.textContent="COMPRAR AHORA";
+}
+async function updateFavoriteButton(){
+ const existing=$("#gscFavoriteButton");
+ if(!existing)return;
+ if(!currentGscUser){existing.classList.remove("active");existing.textContent="♡";return}
+ const {data,error}=await sb.from("gsc_favorites").select("product_id").eq("user_id",currentGscUser.id).eq("product_id","core").maybeSingle();
+ favoriteActive=!!data&&!error;
+ existing.classList.toggle("active",favoriteActive);
+ existing.textContent=favoriteActive?"♥":"♡";
+ existing.setAttribute("aria-label",favoriteActive?"Quitar de favoritos":"Añadir a favoritos");
+}
+function addFavoriteButton(){
+ const actionsBox=document.querySelector(".product-actions");
+ if(!actionsBox||$("#gscFavoriteButton"))return;
+ const b=document.createElement("button");
+ b.type="button";b.id="gscFavoriteButton";b.className="gsc-fav-btn";b.textContent="♡";
+ b.title="Guardar en favoritos";
+ actionsBox.appendChild(b);
+ b.addEventListener("click",async()=>{
+  if(!currentGscUser){openAuth("login");message("Inicia sesión para guardar tus favoritos.");return}
+  const result=favoriteActive
+   ?await sb.from("gsc_favorites").delete().eq("user_id",currentGscUser.id).eq("product_id","core")
+   :await sb.from("gsc_favorites").insert({user_id:currentGscUser.id,product_id:"core"});
+  if(result.error){message("No se ha podido actualizar tu lista de favoritos.");return}
+  await updateFavoriteButton();
+  toast(favoriteActive?"AÑADIDO A FAVORITOS":"ELIMINADO DE FAVORITOS");
+ });
+}
+async function renderAccountPanel(user){
+ currentGscUser=user;
+ if(!user){return}
+ profileBox.innerHTML='<div class="gsc-profile-muted">Cargando tu cuenta GSC…</div>';
+ const [profileRes,favRes,orderRes,newsRes,adminRes]=await Promise.all([
+  sb.from("profiles").select("full_name,marketing_opt_in").eq("id",user.id).maybeSingle(),
+  sb.from("gsc_favorites").select("product_id,created_at").eq("user_id",user.id).order("created_at",{ascending:false}),
+  sb.from("gsc_orders").select("id,total,status,items,created_at").eq("user_id",user.id).order("created_at",{ascending:false}).limit(20),
+  sb.from("gsc_newsletter_subscriptions").select("consent,unsubscribed_at").eq("user_id",user.id).maybeSingle(),
+  sb.from("gsc_admins").select("user_id").eq("user_id",user.id).maybeSingle()
+ ]);
+ const profile=profileRes.data||{};
+ let news=newsRes.data;
+ if(!news&&profile.marketing_opt_in===true){
+  const {data:created}=await sb.from("gsc_newsletter_subscriptions").upsert({
+   user_id:user.id,email:user.email,consent:true,subscribed_at:new Date().toISOString(),unsubscribed_at:null
+  },{onConflict:"user_id"}).select("consent,unsubscribed_at").maybeSingle();
+  news=created||{consent:true,unsubscribed_at:null};
+ }
+ const favs=favRes.data||[],orders=orderRes.data||[];
+ const admin=!!adminRes.data;
+ const fullName=profile.full_name||user.user_metadata?.full_name||user.user_metadata?.name||"";
+ profileBox.innerHTML=`
+  <div class="gsc-profile-head"><div><strong>MI CUENTA GSC</strong><div class="gsc-profile-email">${esc(user.email)}</div></div><button class="gsc-profile-action" id="gscLogout">CERRAR SESIÓN</button></div>
+  <div class="gsc-profile-section">
+   <h3>DATOS PERSONALES</h3>
+   <label class="gsc-profile-field">Nombre completo<input id="gscProfileName" maxlength="80" value="${esc(fullName)}"></label>
+   <button class="gsc-profile-action primary" id="gscSaveProfile">GUARDAR CAMBIOS</button>
+  </div>
+  <div class="gsc-profile-section">
+   <h3>CLUB GSC / LANZAMIENTOS</h3>
+   <label class="gsc-auth-check"><input id="gscNewsletterConsent" type="checkbox" ${news?.consent&&!news?.unsubscribed_at?"checked":""}> Quiero recibir por correo novedades, lanzamientos y acceso anticipado de GSC. Puedo darme de baja cuando quiera.</label>
+   <button class="gsc-profile-action" id="gscSaveNewsletter">GUARDAR PREFERENCIA</button>
+  </div>
+  <div class="gsc-profile-section">
+   <h3>FAVORITOS</h3>
+   <div class="gsc-profile-list">${favs.length?favs.map(x=>'<div class="gsc-profile-item"><span>Camiseta GSC Core</span><span>♥</span></div>').join(""):'<p class="gsc-profile-muted">Todavía no has guardado productos.</p>'}</div>
+   <button class="gsc-profile-action" id="gscGoFavorites">VER PRODUCTO FAVORITO</button>
+  </div>
+  <div class="gsc-profile-section">
+   <h3>MIS PEDIDOS</h3>
+   <div class="gsc-profile-list">${orders.length?orders.map(o=>'<div class="gsc-profile-item"><span>'+esc(new Date(o.created_at).toLocaleDateString("es-ES"))+' · '+esc(o.status.toUpperCase())+'</span><strong>'+moneyGsc(o.total)+'</strong></div>').join(""):'<p class="gsc-profile-muted">Aún no tienes pedidos vinculados a tu cuenta.</p>'}</div>
+  </div>
+  ${admin?'<div class="gsc-profile-section" id="gscAdminPanel"><h3>ADMINISTRACIÓN GSC</h3><div id="gscAdminContent" class="gsc-profile-muted">Cargando panel…</div></div>':""}
+ `;
+ $("#gscLogout").addEventListener("click",async()=>{
+  const {error}=await sb.auth.signOut();
+  if(error){message("No se ha podido cerrar la sesión.");return}
+  closeAuth();message("Sesión cerrada.");
+ });
+ $("#gscSaveProfile").addEventListener("click",async()=>{
+  const name=$("#gscProfileName").value.trim();
+  if(!name){message("Escribe tu nombre.");return}
+  const {error}=await sb.from("profiles").update({full_name:name,updated_at:new Date().toISOString()}).eq("id",user.id);
+  if(error){message("No se han podido guardar los datos.");return}
+  await sb.auth.updateUser({data:{full_name:name}});
+  message("Perfil actualizado correctamente.");
+ });
+ $("#gscSaveNewsletter").addEventListener("click",async()=>{
+  const enabled=$("#gscNewsletterConsent").checked;
+  const payload={user_id:user.id,email:user.email,consent:enabled,subscribed_at:enabled?new Date().toISOString():(news?.subscribed_at||null),unsubscribed_at:enabled?null:new Date().toISOString(),updated_at:new Date().toISOString()};
+  const {error}=await sb.from("gsc_newsletter_subscriptions").upsert(payload,{onConflict:"user_id"});
+  if(error){message("No se ha podido guardar tu preferencia. Inténtalo de nuevo.");return}
+  message(enabled?"Te has suscrito a las novedades de GSC.":"Has cancelado la suscripción a novedades.");
+ });
+ $("#gscGoFavorites").addEventListener("click",()=>{closeAuth();document.querySelector("#drop")?.scrollIntoView({behavior:"smooth"})});
+ if(admin)await renderAdminPanel();
+ await updateFavoriteButton();
+}
+async function renderAdminPanel(){
+ const host=$("#gscAdminContent");if(!host)return;
+ const [productsRes,ordersRes,subsRes]=await Promise.all([
+  sb.from("gsc_products").select("id,name,price,active,stock").order("name"),
+  sb.from("gsc_orders").select("id,customer_name,email,total,status,created_at,items").order("created_at",{ascending:false}).limit(30),
+  sb.from("gsc_newsletter_subscriptions").select("user_id",{count:"exact",head:true}).eq("consent",true).is("unsubscribed_at",null)
+ ]);
+ if(productsRes.error||ordersRes.error){host.textContent="No se han podido cargar los datos de administración.";return}
+ const products=productsRes.data||[],orders=ordersRes.data||[];
+ const total=orders.reduce((n,o)=>n+Number(o.total||0),0);
+ host.innerHTML=`
+  <div class="gsc-admin-grid">
+   <div class="gsc-profile-item"><span>Pedidos registrados</span><strong>${orders.length}</strong></div>
+   <div class="gsc-profile-item"><span>Importe solicitado</span><strong>${moneyGsc(total)}</strong></div>
+   <div class="gsc-profile-item"><span>Suscripciones activas</span><strong>${subsRes.count??0}</strong></div>
+  </div>
+  <div class="gsc-profile-section"><h3>PRODUCTOS Y STOCK</h3>
+   ${products.map(p=>'<div class="gsc-profile-section"><strong>'+esc(p.name)+'</strong><label class="gsc-profile-field">Precio (€)<input type="number" min="0" step="0.01" id="gscPrice_'+esc(p.id)+'" value="'+esc(p.price)+'"></label><div class="gsc-admin-grid">'+["S","M","L","XL","XXL"].map(size=>'<label class="gsc-profile-field">'+size+'<input type="number" min="0" step="1" id="gscStock_'+esc(p.id)+'_'+size+'" value="'+esc(p.stock?.[size]??0)+'"></label>').join("")+'</div><label class="gsc-auth-check"><input type="checkbox" id="gscActive_'+esc(p.id)+'" '+(p.active?"checked":"")+'> Producto visible en la tienda</label><button class="gsc-profile-action primary" data-save-product="'+esc(p.id)+'">GUARDAR PRODUCTO</button></div>').join("")}
+  </div>
+  <div class="gsc-profile-section"><h3>GESTIÓN DE PEDIDOS</h3>
+   <div class="gsc-profile-list">${orders.length?orders.map(o=>'<div class="gsc-profile-section"><div class="gsc-profile-item"><strong>'+esc(o.customer_name)+'</strong><span>'+moneyGsc(o.total)+'</span></div><div class="gsc-profile-muted">'+esc(o.email)+' · '+esc(new Date(o.created_at).toLocaleDateString("es-ES"))+'</div><label class="gsc-profile-field">Estado<select data-order-status="'+esc(o.id)+'" style="padding:10px;background:#090909;color:#fff;border:1px solid var(--line)">'+["recibido","preparando","enviado","entregado","cancelado"].map(st=>'<option value="'+st+'" '+(o.status===st?"selected":"")+'>'+st.toUpperCase()+'</option>').join("")+'</select></label></div>').join(""):'<p class="gsc-profile-muted">Todavía no hay pedidos de clientes registrados con cuenta.</p>'}</div>
+  </div>`;
+ host.querySelectorAll("[data-save-product]").forEach(button=>button.addEventListener("click",async()=>{
+  const id=button.dataset.saveProduct;
+  const stock={};["S","M","L","XL","XXL"].forEach(size=>stock[size]=Math.max(0,Number($("#gscStock_"+id+"_"+size).value)||0));
+  const price=Math.max(0,Number($("#gscPrice_"+id).value)||0),active=$("#gscActive_"+id).checked;
+  const {error}=await sb.from("gsc_products").update({price,stock,active,updated_at:new Date().toISOString()}).eq("id",id);
+  if(error){message("No se han podido guardar los cambios del producto.");return}
+  await loadStoreProduct();message("Producto actualizado.");
+ }));
+ host.querySelectorAll("[data-order-status]").forEach(select=>select.addEventListener("change",async()=>{
+  const {error}=await sb.from("gsc_orders").update({status:select.value,updated_at:new Date().toISOString()}).eq("id",select.dataset.orderStatus);
+  message(error?"No se ha podido actualizar el pedido.":"Estado del pedido actualizado.");
+ }));
+}
+addFavoriteButton();
+loadStoreProduct();
+
 </script>
 <style>
 .gx-progress{position:fixed;top:0;left:0;height:2px;width:0;background:var(--text);z-index:90}
