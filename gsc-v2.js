@@ -73,17 +73,13 @@ function setupCoupon(){
  };
 }
 function setupCheckout(){
- const form=$("#orderForm");if(!form)return;
- form.onsubmit=async e=>{
-  e.preventDefault();const u=user();if(!u){window.GSC_AUTH_API?.openAuth("login");toast("INICIA SESIÓN PARA CONTINUAR");return}
-  const d=Object.fromEntries(new FormData(form)),items=window.GSC_CART_API.items.map(x=>({product_id:x.id,size:x.size,quantity:x.qty}));
-  if(!items.length){toast("TU CARRITO ESTÁ VACÍO");return}
-  const b=form.querySelector('[type="submit"]');b.disabled=true;b.textContent="CONECTANDO CON PAGO SEGURO…";
-  try{const r=await sb.functions.invoke("create-checkout-session",{body:{items,customer:{name:d.name,email:d.email,phone:d.phone||"",address:d.address||""},coupon_code:window.GSC_COUPON_CODE||null}});
-   if(r.error||!r.data?.url)throw new Error(r.data?.error||r.error?.message||"Pago no disponible");window.location.assign(r.data.url);
-  }catch(err){console.error(err);toast("PAGO NO DISPONIBLE. STRIPE AÚN DEBE CONFIGURARSE.");b.disabled=false;b.textContent="PAGAR CON SEGURIDAD"}
- };
- const b=form.querySelector('[type="submit"]');if(b)b.textContent="PAGAR CON SEGURIDAD";
+ const form=$("#orderForm");
+ const button=form?.querySelector('[type="submit"]');
+ if(button){button.textContent="ENVIAR SOLICITUD";button.disabled=false}
+ const note=$("#checkoutNote");
+ if(note)note.textContent="Los pagos online están desactivados temporalmente. Puedes enviar una solicitud de pedido sin pagar; GSC confirmará disponibilidad, envío y forma de pago por correo.";
+ const checkout=$("#checkout");
+ if(checkout)checkout.textContent="SOLICITAR PEDIDO";
 }
 function addTracking(){
  const host=$("#gscAuthProfile"),u=user();if(!host||!u||host.dataset.gscTrack===u.id)return;host.dataset.gscTrack=u.id;
