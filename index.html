@@ -662,6 +662,7 @@ window.GSC_SUPABASE = sb;
 const $ = s => document.querySelector(s);
 const backdrop=$("#gscAuthBackdrop"), msg=$("#gscAuthMessage"), forms=$("#gscAuthForms");
 let mode="signup";
+let currentGscUser=null;
 function message(t){msg.textContent=t||""}
 function showMode(next){
  mode=next;$("#gscSignupForm").hidden=next!=="signup";$("#gscLoginForm").hidden=next!=="login";
@@ -717,13 +718,12 @@ $("#gscGoogleLogin").addEventListener("click",async()=>{
  const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.origin}});
  if(error)message("Google todavía no está configurado en el proveedor de autenticación. Puedes registrarte con correo mientras tanto.");
 });
-sb.auth.onAuthStateChange((_event,session)=>renderUser(session?.user||null));
 
 sb.auth.getSession().then(({data})=>renderUser(data.session?.user||null));
 
 const profileBox=$("#gscAuthProfile");
 const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let currentGscUser=null, favoriteActive=false;
+let favoriteActive=false;
 const moneyGsc=n=>Number(n||0).toFixed(2).replace(".",",")+" €";
 
 async function loadStoreProduct(){
@@ -824,8 +824,14 @@ async function renderAccountPanel(user){
  });
  $("#gscSaveNewsletter").addEventListener("click",async()=>{
   const enabled=$("#gscNewsletterConsent").checked;
-  const payload={user_id:user.id,email:user.email,consent:enabled,subscribed_at:enabled?new Date().toISOString():(news?.subscribed_at||null),unsubscribed_at:enabled?null:new Date().toISOString(),updated_at:new Date().toISOString()};
-  const {error}=await sb.from("gsc_newsletter_subscriptions").upsert(payload,{onConflict:"user_id"});
+  let error=null;
+  if(enabled){
+   const result=await sb.from("gsc_newsletter_subscriptions").upsert({user_id:user.id,email:user.email,consent:true,subscribed_at:new Date().toISOString(),unsubscribed_at:null,updated_at:new Date().toISOString()},{onConflict:"user_id"});
+   error=result.error;
+  }else if(news){
+   const result=await sb.from("gsc_newsletter_subscriptions").update({consent:false,unsubscribed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("user_id",user.id);
+   error=result.error;
+  }
   if(error){message("No se ha podido guardar tu preferencia. Inténtalo de nuevo.");return}
   message(enabled?"Te has suscrito a las novedades de GSC.":"Has cancelado la suscripción a novedades.");
  });
@@ -868,6 +874,7 @@ async function renderAdminPanel(){
   message(error?"No se ha podido actualizar el pedido.":"Estado del pedido actualizado.");
  }));
 }
+sb.auth.onAuthStateChange((_event,session)=>renderUser(session?.user||null));
 addFavoriteButton();
 loadStoreProduct();
 
