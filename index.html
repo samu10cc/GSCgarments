@@ -576,7 +576,9 @@ renderCart();
 
 <style id="GSC_SUPABASE_ACCOUNT_V1">
 .gsc-account-btn{border:1px solid var(--line);background:transparent;color:var(--text);padding:0 14px;height:40px;font-size:10px;letter-spacing:.14em;font-weight:700;text-transform:uppercase}
-.gsc-account-btn:hover{border-color:var(--text)}
+.gsc-account-btn:hover,.gsc-login-btn:hover{border-color:var(--text)}
+.gsc-login-btn{border:1px solid var(--text);background:var(--text);color:#090909;padding:0 14px;height:40px;font-size:10px;letter-spacing:.14em;font-weight:700;text-transform:uppercase}
+.gsc-login-btn:hover{background:transparent;color:var(--text)}
 .gsc-auth-backdrop{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.82);display:none;place-items:center;padding:18px}
 .gsc-auth-backdrop.open{display:grid}
 .gsc-auth-card{width:min(460px,100%);max-height:90vh;overflow:auto;background:#111112;border:1px solid var(--line);padding:28px;position:relative}
@@ -593,7 +595,7 @@ renderCart();
 .gsc-auth-switch button{background:none;border:0;color:var(--muted);font-size:11px;text-decoration:underline}
 .gsc-auth-message{min-height:20px;margin-top:12px;font-size:12px!important}
 .gsc-auth-profile{margin-top:18px;padding:15px;border:1px solid var(--line);font-size:13px}
-@media(max-width:560px){.gsc-account-btn{padding:0 9px;font-size:9px}.gsc-auth-card{padding:22px}}
+@media(max-width:560px){.gsc-account-btn,.gsc-login-btn{padding:0 8px;font-size:8px;letter-spacing:.08em}.gsc-auth-card{padding:22px}}
 </style>
 <div class="gsc-auth-backdrop" id="gscAuthBackdrop" role="dialog" aria-modal="true" aria-labelledby="gscAuthTitle">
  <section class="gsc-auth-card">
@@ -615,7 +617,7 @@ renderCart();
     <button class="btn" type="submit">INICIAR SESIÓN</button>
    </form>
    <button class="gsc-auth-google" id="gscGoogleLogin" type="button">CONTINUAR CON GOOGLE</button>
-   <div class="gsc-auth-switch"><button type="button" id="gscShowSignup">Crear cuenta</button><button type="button" id="gscShowLogin">Ya tengo cuenta</button></div>
+
   </div>
   <div id="gscAuthProfile" class="gsc-auth-profile" hidden></div>
   <p class="gsc-auth-message" id="gscAuthMessage" aria-live="polite"></p>
@@ -632,32 +634,31 @@ let mode="signup";
 function message(t){msg.textContent=t||""}
 function showMode(next){
  mode=next;$("#gscSignupForm").hidden=next!=="signup";$("#gscLoginForm").hidden=next!=="login";
- $("#gscAuthTitle").textContent=next==="signup"?"CREA TU CUENTA.":"BIENVENIDO.";
- $("#gscAuthIntro").textContent=next==="signup"?"Crea tu cuenta para formar parte de GSC.":"Accede a tu cuenta de GSC.";
- $("#gscShowSignup").style.display=next==="signup"?"none":"inline";
- $("#gscShowLogin").style.display=next==="login"?"none":"inline";
+ $("#gscAuthTitle").textContent=next==="signup"?"CREA TU CUENTA.":"INICIA SESIÓN.";
+ $("#gscAuthIntro").textContent=next==="signup"?"Regístrate para formar parte de GSC y recibir novedades si lo deseas.":"Accede a tu cuenta de GSC con tu correo y contraseña.";
  message("");
 }
-function openAuth(){backdrop.classList.add("open");showMode("signup")}
+function openAuth(next="signup"){backdrop.classList.add("open");showMode(next)}
 function closeAuth(){backdrop.classList.remove("open")}
 const accountBtn=document.createElement("button");
 accountBtn.type="button";accountBtn.className="gsc-account-btn";accountBtn.id="gscAccountButton";accountBtn.textContent="REGISTRARSE EN GSC";
-accountBtn.addEventListener("click",openAuth);
+accountBtn.addEventListener("click",()=>openAuth("signup"));
+const loginBtn=document.createElement("button");
+loginBtn.type="button";loginBtn.className="gsc-login-btn";loginBtn.id="gscLoginButton";loginBtn.textContent="INICIAR SESIÓN";
+loginBtn.addEventListener("click",()=>openAuth("login"));
 const actions=document.querySelector(".actions");
-if(actions) actions.prepend(accountBtn);
+if(actions){actions.prepend(loginBtn);actions.prepend(accountBtn);}
 $("#gscAuthClose").addEventListener("click",closeAuth);
 backdrop.addEventListener("click",e=>{if(e.target===backdrop)closeAuth()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeAuth()});
-$("#gscShowSignup").addEventListener("click",()=>showMode("signup"));
-$("#gscShowLogin").addEventListener("click",()=>showMode("login"));
 function renderUser(user){
  if(user){
   forms.hidden=true;$("#gscAuthProfile").hidden=false;
   const name=user.user_metadata?.full_name||user.user_metadata?.name||user.email||"Cliente GSC";
   $("#gscAuthProfile").textContent="Sesión iniciada como "+name+" · "+user.email;
-  accountBtn.textContent="MI PERFIL";
+  accountBtn.textContent="MI PERFIL";loginBtn.hidden=true;
  }else{
-  forms.hidden=false;$("#gscAuthProfile").hidden=true;accountBtn.textContent="REGISTRARSE EN GSC";
+  forms.hidden=false;$("#gscAuthProfile").hidden=true;accountBtn.textContent="REGISTRARSE";loginBtn.hidden=false;
  }
 }
 $("#gscSignupForm").addEventListener("submit",async e=>{
