@@ -1074,15 +1074,16 @@ if(GX.nextDrop&&q("#lookbook")){
 
 /* --- Carrito: envío, descuento y barra de envío gratis --- */
 const st={pct:0,code:""};
-const sub=()=>total(),disc=()=>sub()*st.pct/100,ship=()=>cart.length&&sub()-disc()<GX.freeShipFrom?GX.shipping:0,grand=()=>sub()-disc()+ship();
+const sub=()=>total(),disc=()=>st.fixed!=null?Math.min(sub(),st.fixed):sub()*st.pct/100,ship=()=>cart.length&&sub()-disc()<GX.freeShipFrom?GX.shipping:0,grand=()=>sub()-disc()+ship();
 q(".cart-bottom").insertAdjacentHTML("afterbegin",`<div id="gxTot"></div>${Object.keys(GX.codes).length?`<form class="gx-code" id="gxCode"><input placeholder="Código de descuento" aria-label="Código de descuento"><button type="submit">APLICAR</button></form>`:""}`);
 q("#cartLines").insertAdjacentHTML("beforebegin",`<div class="gx-ship" id="gxShip"></div>`);
 const paint=()=>{
   const net=sub()-disc(),left=Math.max(0,GX.freeShipFrom-net);
   q("#gxShip").style.display=cart.length?"block":"none";
   q("#gxShip").innerHTML=`<p>${left>0?`Te faltan <b>${money(left)}</b> para el envío gratis`:"Tienes <b>envío gratis</b>"}</p><i><u style="width:${Math.min(100,net/GX.freeShipFrom*100)}%"></u></i>`;
-  q("#gxTot").innerHTML=`<div><span>Subtotal</span><span>${money(sub())}</span></div>${st.pct?`<div><span>Descuento ${st.code} (−${st.pct}%)</span><span>−${money(disc())}</span></div>`:""}<div><span>Envío</span><span>${cart.length?(ship()?money(ship()):"Gratis"):"—"}</span></div><div class="t"><span>TOTAL</span><span>${money(cart.length?grand():0)}</span></div>`;
+  q("#gxTot").innerHTML=`<div><span>Subtotal</span><span>${money(sub())}</span></div>${st.active?`<div><span>Descuento ${st.code}</span><span>−${money(disc())}</span></div>`:""}<div><span>Envío</span><span>${cart.length?(ship()?money(ship()):"Gratis"):"—"}</span></div><div class="t"><span>TOTAL</span><span>${money(cart.length?grand():0)}</span></div>`;
 };
+window.GSC_GX_API={setCoupon(c){st.pct=c.discount_type==="percentage"?Number(c.discount_value):0;st.fixed=c.discount_type==="fixed"?Number(c.discount_value):null;st.code=c.code;st.active=true;paint()},clearCoupon(){st.pct=0;st.fixed=null;st.code="";st.active=false;paint()}};
 if(q("#gxCode"))q("#gxCode").onsubmit=e=>{
   e.preventDefault();const c=e.target.firstElementChild.value.trim().toUpperCase();
   if(GX.codes[c]){st.pct=GX.codes[c];st.code=c;toast("CÓDIGO APLICADO")}else{st.pct=0;st.code="";toast("CÓDIGO NO VÁLIDO")}
@@ -1092,7 +1093,7 @@ const rc=renderCart;renderCart=function(){rc();paint()};
 const oc=openCheckout;
 openCheckout=function(){
   oc();if(!cart.length)return;
-  q("#orderSummary").innerHTML=cart.map(x=>`${x.size} × ${x.qty} — ${money(CONFIG.product.price*x.qty)}`).join("<br>")+`<br>Envío — ${ship()?money(ship()):"Gratis"}${st.pct?`<br>Descuento — −${money(disc())}`:""}<strong style="display:block;color:#fff;margin-top:10px">TOTAL — ${money(grand())}</strong>`;
+  q("#orderSummary").innerHTML=cart.map(x=>`${x.name||CONFIG.product.name} · ${x.size} × ${x.qty} — ${money((x.price??CONFIG.product.price)*x.qty)}`).join("<br>")+`<br>Envío — ${ship()?money(ship()):"Gratis"}${st.pct?`<br>Descuento — −${money(disc())}`:""}<strong style="display:block;color:#fff;margin-top:10px">TOTAL — ${money(grand())}</strong>`;
 };
 q("#checkout").onclick=openCheckout;
 renderCart();
