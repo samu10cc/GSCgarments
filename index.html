@@ -678,8 +678,21 @@ accountBtn.addEventListener("click",()=>openAuth("signup"));
 const loginBtn=document.createElement("button");
 loginBtn.type="button";loginBtn.className="gsc-login-btn";loginBtn.id="gscLoginButton";loginBtn.textContent="INICIAR SESIÓN";
 loginBtn.addEventListener("click",()=>openAuth("login"));
-const actions=document.querySelector(".actions");
+const actions=document.querySelector("header .actions")||document.querySelector(".navbar .actions");
 if(actions){actions.prepend(loginBtn);actions.prepend(accountBtn);}
+function ensureAuthButtons(){
+ const target=document.querySelector("header .actions")||document.querySelector(".navbar .actions");
+ if(target){
+  if(!accountBtn.isConnected)target.prepend(accountBtn);
+  if(!loginBtn.isConnected)target.prepend(loginBtn);
+ }
+ accountBtn.hidden=false;
+ accountBtn.removeAttribute("hidden");
+ loginBtn.hidden=false;
+ loginBtn.removeAttribute("hidden");
+ accountBtn.style.removeProperty("display");
+ loginBtn.style.removeProperty("display");
+}
 $("#gscAuthClose").addEventListener("click",closeAuth);
 backdrop.addEventListener("click",e=>{if(e.target===backdrop)closeAuth()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeAuth()});
@@ -690,7 +703,9 @@ function renderUser(user){
   accountBtn.textContent="MI PERFIL";loginBtn.hidden=true;
   renderAccountPanel(user).catch(()=>message("No se han podido cargar todos los datos de tu cuenta."));
  }else{
-  forms.hidden=false;$("#gscAuthProfile").hidden=true;accountBtn.textContent="REGISTRARSE";loginBtn.hidden=false;
+  forms.hidden=false;$("#gscAuthProfile").hidden=true;
+  accountBtn.textContent="REGISTRARSE";
+  ensureAuthButtons();
   updateFavoriteButton();
  }
 }
