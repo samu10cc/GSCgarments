@@ -126,6 +126,23 @@ async function renderAdminV2(){
  host.querySelectorAll("[data-drop]").forEach(b=>b.onclick=async()=>{const r=await sb.from("gsc_drops").update({active:b.dataset.active!=="true"}).eq("id",b.dataset.drop);toast(r.error?"ERROR":"DROP ACTUALIZADO");if(!r.error)await reloadAdmin()});
 }
 async function reloadAdmin(){const h=$("#gscAdminContent");if(!h)return;h.dataset.v2="";$("#gscV2Admin")?.remove();await renderAdminV2()}
-function watchAccount(){const h=$("#gscAuthProfile");if(!h)return;new MutationObserver(()=>{if(user()){addTracking();loadClub();loadDrops();if($("#gscAdminContent")&&!$("#gscV2Admin"))renderAdminV2()}}).observe(h,{childList:true,subtree:true})}
-async function init(){enhanceCart();setupCoupon();setupCheckout();watchAccount();await loadProducts();await loadReviews();await loadClub();await loadDrops();if(user())addTracking();const q=new URLSearchParams(location.search);if(q.get("checkout")==="success")toast("PAGO RECIBIDO. ACTUALIZANDO TU PEDIDO…");if(q.get("checkout")==="cancel")toast("PAGO CANCELADO. TU CARRITO SIGUE GUARDADO.");}
+function watchAccount(){const h=$("#gscAuthProfile");if(!h)return;new MutationObserver(()=>{if(user()){addTracking();loadClub();loadDrops();if($("#gscAdminContent")&&!$("#gscV2Admin"))renderAdminV2();if($("#gscAdminContent"))renderContactInbox()}}).observe(h,{childList:true,subtree:true})}
+
+async function renderContactInbox(){
+ const host=$("#gscAdminContent");
+ if(!host||host.dataset.contactInbox==="yes")return;
+ host.dataset.contactInbox="yes";
+ const {data,error}=await sb.from("gsc_contact_messages").select("id,name,email,subject,message,created_at").order("created_at",{ascending:false}).limit(100);
+ const section=document.createElement("section");
+ section.className="gsc-v2-admin-card";
+ section.innerHTML="<h4>MENSAJES DE CLIENTES</h4>";
+ if(error){section.insertAdjacentHTML("beforeend",'<p class="gsc-v2-muted">No se han podido cargar los mensajes.</p>');}
+ else if(!data?.length){section.insertAdjacentHTML("beforeend",'<p class="gsc-v2-muted">Todavía no hay mensajes recibidos.</p>');}
+ else{
+  section.insertAdjacentHTML("beforeend",data.map(m=>'<article class="gsc-v2-order"><strong>'+esc(m.subject)+'</strong><p class="gsc-v2-muted">'+esc(m.name)+' · '+esc(m.email)+' · '+new Date(m.created_at).toLocaleString("es-ES")+'</p><p style="white-space:pre-wrap">'+esc(m.message)+'</p><a class="gsc-profile-action" href="mailto:'+encodeURIComponent(m.email)+'?subject='+encodeURIComponent("Re: "+m.subject)+'">RESPONDER POR CORREO</a></article>').join(""));
+ }
+ host.append(section);
+}
+
+async function init(){enhanceCart();setupCoupon();setupCheckout();watchAccount();await loadProducts();await loadReviews();await loadClub();await loadDrops();if(user()){addTracking();renderContactInbox()}const q=new URLSearchParams(location.search);if(q.get("checkout")==="success")toast("PAGO RECIBIDO. ACTUALIZANDO TU PEDIDO…");if(q.get("checkout")==="cancel")toast("PAGO CANCELADO. TU CARRITO SIGUE GUARDADO.");}
 if(sb)init();
